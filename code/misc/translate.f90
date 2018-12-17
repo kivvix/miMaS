@@ -15,7 +15,7 @@ real(rp)                    :: k,x0,x1
 integer :: i, i_time, z
 
 
-T_final = 15.0_rp
+T_final = 2019.0_rp
 v = 1._rp
 x0 = 0._rp
 x1 = 2._rp*pi
@@ -26,11 +26,20 @@ dx = 1.38337934_rp/(k*2._rp*pi)
 N = int((x1-x0)/dx)
 allocate( u(0:N-1) )
 
-dt = 1.433_rp*dx
+!dt = 1.433_rp*dx
+!dt = 1.606_rp*dx
+dt = 0.5_rp*dx
 
 !! INIT
 do i = 0,N-1
-  u(i) = cos(k*X(i))
+  !u(i) = cos(k*X(i))
+  if (i<0.3*N) then
+    u(i) = X(i)
+  elseif (i<0.6*N) then
+    u(i) = 1._rp
+  else
+    u(i) = 0._rp
+  end if
 end do
 
 open(newunit=z,file="u_init.dat")

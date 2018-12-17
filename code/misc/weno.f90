@@ -18,9 +18,9 @@ function flux_WENO_p ( f ) result(fpip12)
             +0.25_rp*SQ( f(-1) - f(+1) )
   w2 = 13._rp/12._rp*SQ( f(+0) - 2._rp*f(+1) + f(+2) ) &
             +0.25_rp*SQ( 3._rp*f(+0) - 4._rp*f(+1) + f(+2) )
-  w0 = 0.1_rp/SQ(epsi+w0)
-  w1 = 0.6_rp/SQ(epsi+w1)
-  w2 = 0.3_rp/SQ(epsi+w2)
+  w0 = 0.1_rp /SQ(epsi+w0)
+  w1 = 0.6_rp /SQ(epsi+w1)
+  w2 = 0.3_rp /SQ(epsi+w2)
 
   sum_w = w0+w1+w2
   w0 = w0/sum_w
@@ -46,9 +46,9 @@ function flux_WENO_m ( f ) result(fmip12)
             +0.25_rp*SQ( f(+0) - f(+2) )
   w2 = 13._rp/12._rp*SQ( f(-1) - 2._rp*f(+0) + f(+1) ) &
             +0.25_rp*SQ( f(-1) - 4._rp*f(+0) + 3._rp*f(+1) )
-  w0 = 0.1_rp/SQ(epsi+w0)
-  w1 = 0.6_rp/SQ(epsi+w1)
-  w2 = 0.3_rp/SQ(epsi+w2)
+  w0 = 0.1_rp /SQ(epsi+w0)
+  w1 = 0.6_rp /SQ(epsi+w1)
+  w2 = 0.3_rp /SQ(epsi+w2)
 
   sum_w = w0+w1+w2
   w0 = w0/sum_w
