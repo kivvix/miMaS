@@ -3,7 +3,7 @@ module time
 implicit none
 contains
 
-function ssprk33 ( u , L , dt ) result(un1)
+function erkssp33 ( u , L , dt ) result(un1)
   real(rp) , dimension(0:) :: u
     interface
       function L(ui) result(uo)
@@ -20,9 +20,9 @@ function ssprk33 ( u , L , dt ) result(un1)
   u1  = u + dt*L(u)
   u2  = 0.75_rp*u + 0.25_rp*u1 + 0.25*dt*L(u1)
   un1 = 1._rp/3._rp*u + 2._rp/3._rp*u2 + 2._rp/3._rp*dt*L(u2)
-end function ssprk33
+end function erkssp33
 
-function ssprk34 ( u , L , dt ) result(un1)
+function erkssp43 ( u , L , dt ) result(un1)
   real(rp) , dimension(0:) :: u
     interface
       function L(ui) result(uo)
@@ -39,7 +39,7 @@ function ssprk34 ( u , L , dt ) result(un1)
   un1 = un1 + 0.5_rp*dt*L(un1)
   un1 = 2._rp/3._rp*u + 1._rp/3._rp*un1 + 1._rp/6._rp*dt*L(un1)
   un1 = un1 + 0.5_rp*dt*L(un1)
-end function ssprk34
+end function erkssp43
 
 function euler ( u , L , dt ) result(un1)
   real(rp) , dimension(0:) :: u
