@@ -37,7 +37,7 @@ $(OBJ_dir)/%.o : %.f90 $(OBJ)
 
 %.out : $(OBJ_dir)/%.o $(OBJ)
 	@ echo "\033[33m$@\033[0m"
-	$(LD) -L/usr/local/lib $(FFLAGS) $^ -o $@
+	$(LD) -L/usr/local/lib -ldfftpack $(FFLAGS) $^ -o $@
 
 
 
