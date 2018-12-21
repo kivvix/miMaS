@@ -41,6 +41,39 @@ function erkssp43 ( u , L , dt ) result(un1)
   un1 = un1 + 0.5_rp*dt*L(un1)
 end function erkssp43
 
+function erk76 ( u , L , dt ) result(un1)
+  real(rp) , dimension(0:) :: u
+    interface
+      function L(ui) result(uo)
+        import rp
+        real(rp) , dimension(0:) :: ui
+        real(rp) , dimension(0:size(ui)-1) :: uo
+    end function L
+  end interface
+  real(rp) :: dt
+
+  real(rp) , dimension(0:size(u)-1) :: un1
+
+  real(rp) , parameter :: nu = 0.33333_rp
+  real(rp) , dimension(0:size(u)-1) :: k1,k2,k3,k4,k5,k6,k7
+
+  k1 = dt*L( u )
+  k2 = dt*L( u + nu*k1 )
+  k3 = dt*L( u + ((4._rp*nu-1)*k1 + k2)/(8._rp*nu) )
+  k4 = dt*L( u + ((10._rp*nu-2._rp)*k1 + 2._rp*k2 + 8._rp*nu*k3)/(27._rp*nu) )
+  k5 = dt*L( u + ( -((77._rp*nu-56._rp)+(17._rp*nu-8._rp)*sqrt(21._rp))*k1           &
+                  -8._rp*(7._rp+sqrt(21._rp))*k2 + 48._rp*(7._rp+sqrt(21._rp))*nu*k3 &
+                  -3._rp*(21._rp+sqrt(21._rp))*nu*k4 )/(392._rp*nu) )
+  k6 = dt*L( u + ( -5._rp*((287._rp*nu-56._rp) - (59._rp*nu-8._rp)*sqrt(21._rp))*k1 &
+              - 40._rp*(7._rp-sqrt(21._rp))*k2 + 320._rp*sqrt(21._rp)*nu*k3 + 3._rp*(21-121*sqrt(21._rp))*nu*k4 &
+              + 392._rp*(6._rp-sqrt(21._rp))*nu*k5 )/(1960._rp*nu) )
+  k7 = dt*L( u + ( 15._rp*((30._rp*nu-8._rp)-(7._rp*nu*sqrt(21._rp)))*k1 + 120._rp*k2 &
+                   -40._rp*(5._rp+7._rp*sqrt(21._rp))*nu*k3 + 63._rp*(2._rp+3._rp*sqrt(21._rp))*nu*k4 &
+                   - 14._rp*(49._rp-9._rp*sqrt(21._rp))*nu*k5 + 70._rp*(7._rp+sqrt(21._rp))*nu*k6)/(180._rp*nu) )
+
+  un1 = u + (9._rp*k1 + 64._rp*k3 + 49._rp*k5 + 49._rp*k6 + 9._rp*k7)/180._rp
+end function erk76
+
 function euler ( u , L , dt ) result(un1)
   real(rp) , dimension(0:) :: u
     interface
@@ -56,39 +89,6 @@ function euler ( u , L , dt ) result(un1)
   
   un1 = u + dt*L(u)
 end function euler
-
-!function poisson1D_per(rho) result(E)
-!  ! pour se simiplifier la vie avec la FFTPACK
-!  ! les indices commencent à 1 uniquement dans cette fonction
-!  ! Fortran est capable de réadapter les indices au programme principal
-!  real(rp) , dimension(d%nx) :: rho
-!  real(rp) , dimension(d%nx) :: E
-!
-!  real(rp) , dimension(2*(d%nx)+15) :: coefd
-!  real(rp) :: tmp,im,re
-!  integer  :: i
-!  tmp = 0.5_rp*((d%x_max-d%x_0)/pi)/real(d%nx,rp)
-!
-!  ! initiatilize working array
-!  call dffti(d%nx,coefd)
-!
-!  do i=1,d%nx
-!    E(i) = rho(i) - 1._rp
-!  end do
-!
-!  ! compute FFT of rho-1
-!  call dfftf(d%nx,E,coefd)
-!  E(1) = 0._rp ! E est de moyenne nulle donc le premier coeffcient de Fourrier est nul
-! 
-!  do i=1,(d%nx)/2-1
-!    re = E(2*i) ; im=E(2*i+1)
-!    E(2*i)   =  tmp/real(i,rp)*im ! Re(\hat{E}) = Im(\hat{rho})/k
-!    E(2*i+1) = -tmp/real(i,rp)*re ! Im(\hat{E}) = -Re(\hat{rho})/k
-!  end do
-!
-!  if (mod(d%nx,2)==0) E(d%nx) = 0._rp
-!  call dfftb(d%nx,E,coefd) ! fft inverse
-!end function poisson1D_per
 
 function fft_time ( u ,  x0 , x1 , dt ) result(un1)
   real(rp) , dimension(:) :: u

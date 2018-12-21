@@ -15,7 +15,7 @@ real(rp)                    :: k,x0,x1
 integer :: i, i_time, z
 
 
-T_final = 2_rp*pi
+T_final = 10000_rp*pi
 v = +1._rp
 x0 = 0._rp
 x1 = 2._rp*pi
@@ -60,12 +60,12 @@ i_time = 0
 do while ( i_time*dt < T_final )
 !do while ( i_time <= 200 )
   write (*,"(A1,I0.4)",advance='no') 13,i_time
-  u = erkssp33( u , L , dt )
+  u = erk76( u , L , dt )
   !u = euler( u , L , dt )
   i_time = i_time+1
 end do
 
-print*,i_time
+write (*,"(A1,I0.4)") 13,i_time
 open(newunit=z,file="u_vp.dat")
 do i=0,N-1
   write(z,*) X(i),u(i),u0(i)
