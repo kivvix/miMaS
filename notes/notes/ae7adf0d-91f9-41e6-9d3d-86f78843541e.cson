@@ -1,0 +1,178 @@
+createdAt: "2019-01-07T09:09:23.818Z"
+updatedAt: "2019-01-07T11:22:44.274Z"
+type: "MARKDOWN_NOTE"
+folder: "d100ebf6344246eb5804"
+title: "Classe d'itérateur stencil"
+tags: [
+  "C++"
+  "UML"
+]
+content: '''
+  # Classe d'itérateur `stencil`
+  
+  On souhaite parcourir un tableau 2D représentant la distribution de particules dans l'espace des phases, tableau représenté à l'aide d'une matrice dans la librairie `ublas` de `boost`.
+  
+  Le champs que nous utilisons peut se résumer à quelque chose comme ceci :
+  
+  ```c++
+    using namespace boost::numeric;
+    typename ublas::matrix field;
+  ```
+  
+  Bien que (n'ayant pas encore écrit le code) il y ait des chances pour que le code final soit un peu plus compliqué (une classe fille de `ubals::matrix` ce qui permettra d'ajouter des méthodes propres à notre champ).
+  
+  On souhaite un itérateur sur cette classe qui permettra d'accéder directement aux valeurs :
+  
+  $$
+    \\begin{aligned}
+      (f_{i-2,k},f_{i-1,k},f_{i,k},f_{i+1,k},f_{i+2,k})&\\gets \\texttt{f.stencil\\_x(i,k)} \\\\
+      (f_{i,k-2},f_{i,k-1},f_{i,k},f_{i,k+1},f_{i,k+2})&\\gets \\texttt{f.stencil\\_v(i,k)}
+    \\end{aligned}
+  $$
+  
+  Il est à noter que, travaillant sur un tableau en 2 dimensions, il sera nécessaire de faire attention à la dimension dans laquelle on travaille.
+  
+  ## Conditions aux bords
+  
+  L'intérêt de faire une classe d'itérateur pour le *stencil* est de gérer les conditions aux bords à l'intérieur de celle-ci. Par défaut on peut considérer des condtions aux bords périodiques, puis envisager une spécialisation de *template* pour d'autres conditions (essentiellement Neumann).
+  
+  Pour prendre en compte ces conditions aux bords il est nécessaire de connaitre la taille (ou en tout cas l'itérateur de début et de fin du domaine à parcourir).
+  
+  @startuml
+  class stencil {
+    int i
+    int k
+    int begin,end
+    field * data
+    {abstract} operator*() virtual
+    {abstract} operator++() virtual
+  }
+  
+  class stencil_x {
+    operator*()
+    operator++()
+  }
+  note left of stencil_x
+    Incrémentation de la variable `i`
+    Operateur `*` de (i-2,i+2)
+  end note
+  
+  class stencil_v {
+    operator*()
+    operator++()
+  }
+  note right of stencil_v
+    Incrémentation de la variable `k`
+    Operateur `*` de (k-2,k+2)
+  end note
+  
+  stencil <|-- stencil_x
+  stencil <|-- stencil_v
+  
+  @enduml
+  
+  ## Exemple de code
+  
+  De façon simplifié le code peut ressembler à quelque chose comme ce qui suit.
+  
+  ```c++
+  template <typename T>
+  struct stencil
+  {
+    typedef std::tuple<T,T,T,T,T>           value_type;
+    typedef std::ptrdiff_t                  difference_type;
+    typedef std::tuple<T*,T*,T*,T*,T*>      pointer;
+    typedef std::tuple<T&,T&,T&,T&,T&>      reference;
+    typedef std::random_access_iterator_tag iterator_category;
+  
+    std::size_t i,k;
+    field<T> *  data;
+    
+    virtual value_type
+    operator * ()
+    {}
+    
+    virtual auto&
+    operator ++ ()
+    {}
+    virtual auto
+    operator ++ (int)
+    {}
+    
+    virtual auto&
+    operator -- ()
+    {}
+    virtual auto
+    operator -- (int)
+    {}
+  };
+  ```
+  
+  Il suffit maintenant de surcharger les différents opérateurs dans les classes filles pour avoir une classe fonctionnelle.
+  
+  ```c++
+  template <typename T>
+  struct stencil_x : public stencil
+  {
+    value_type
+    operator * ()
+    {
+      return std::make_tupe( (*data)(i-2,k) , (*data)(i-1,k) ,
+              (*data)(i,k) , (*data)(i+1,k) , (*data)(i+2,k) );
+    }
+  
+    auto&
+    operator ++ ()
+    { ++i; return *this; }
+    auto
+    operator ++ (int)
+    { tmp = *this; ++i; return tmp; }
+  };
+  
+  
+  template <typename T>
+  struct stencil_v : public stencil
+  {
+    value_type
+    operator * ()
+    {
+      return std::make_tupe( (*data)(i,k-2) , (*data)(i,k-1) ,
+              (*data)(i,k) , (*data)(i,k+1) , (*data)(i,k+2) );
+    }
+  
+    auto&
+    operator ++ ()
+    { ++k; return *this; }
+    auto
+    operator ++ (int)
+    { tmp = *this; ++k; return tmp; }
+  };
+  
+  ```
+  
+  Il s'agit là d'une ébauche ne prennant pas en compte les bords, pour prendre en compte ceux-ci, la méthode `stencil_x::operator*()` devient :
+  
+  ```c++
+    value_type
+    operator*()
+    {
+      if ( i < 2 ) {
+        return std::make_tuple( (*data)((i-2+data->size1())%data->size1(),k)   ,
+                                (*data)((i-1+data->size1())%data->size1(),k)   ,
+                                (*data)(i,k) , (*data)(i+1,k) , (*data)(i+2,k) );
+      }
+      if ( i > data->size1()-3 ) {
+        return std::make_tupe( (*data)(i-2,k) , (*data)(i-1,k) , (*data)(i,k) ,
+                               (*data)((i+1)%data->size1(),k) ,
+                               (*data)((i+2)%data->size1(),k) );
+      }
+      return std::make_tupe( (*data)(i-2,k) , (*data)(i-1,k) ,
+              (*data)(i,k) , (*data)(i+1,k) , (*data)(i+2,k) );
+    }
+  ```
+  
+  Il s'agit là des conditions aux bords périodiques. Une modification similaire est nécessaire pour la méthode `stencil_v::operator*()` en utilisant `data->size2()` comme dimension du modulo.
+  
+'''
+isStarred: false
+isTrashed: false

@@ -1,0 +1,29 @@
+createdAt: "2019-01-07T08:24:44.194Z"
+updatedAt: "2019-01-07T10:42:43.977Z"
+type: "MARKDOWN_NOTE"
+folder: "d100ebf6344246eb5804"
+title: "ToDo list"
+tags: [
+  "TODO"
+]
+content: '''
+  # ToDo list
+  
+  - [x] Installer `boost` (et tester un premier programme avec `ublas`)
+  - [ ] Écrire une classe d'itérateur `stencil`
+  - [ ] Écrire un code de transport WENO
+  - [ ] Tester les perfs par rapport à une écriture mode `C`
+  - [ ] Chercher une librairie pour faire des FFT en `C++`
+  - [ ] Écrire un code de transport par FFT
+  - [ ] Écrire des schémas en temps
+  - [ ] Résolution de l'équation de Poisson par FFT (finition de la réécriture complète de miMaS en C++)
+  
+  Il est aussi envisageable d'effectuer des tests unitaires :
+  
+  - [ ] Classe `stencil`
+  - [ ] Transport WENO
+  - [ ] Transport FFT
+  
+'''
+isStarred: false
+isTrashed: false
