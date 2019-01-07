@@ -15,5 +15,9 @@ int main(int,char**)
   std::cout << m.density() << std::endl;
 
   std::cout << m.step.dv << std::endl;
+  std::cout << m.flux()[0] << std::endl;
+  std::cout << m.flux()[1] << std::endl;
+  std::cout << m.flux()[2] << std::endl;
   return 0;
 }
+
