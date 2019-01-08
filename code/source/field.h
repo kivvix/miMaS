@@ -1,9 +1,14 @@
+#ifndef _FIELD_H_
+#define _FIELD_H_
+
 #include <iostream>
 #include <algorithm>
 
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/io.hpp>
 #include <boost/math/constants/constants.hpp>
+
+#include "matrix_proxy.h"
 
 /**
 # `field<T>`
@@ -35,51 +40,51 @@ Default value for step is $\Delta x = 1$ and $\Delta v = 1$. Default value for r
 **/
 
 using namespace boost::numeric;
-template <typename T>
-struct field : public ublas::matrix<T>
+template <typename _T>
+struct field : public ublas::matrix<_T>
 {
   struct step
   {
-    T dx=1.,dv=1.;
+    _T dx=1.,dv=1.;
     step()            = default;
     step(const step&) = default;
     step(step&&)      = default;
-    step(T dx_,T dv_)
+    step(_T dx_,_T dv_)
       : dx(dx_) , dv(dv_)
     {}
   } step;
   struct range
   {
-    T x_min=0. ,x_max=1.;
-    T v_min=-1.,v_max=1.;
+    _T x_min=0. ,x_max=1.;
+    _T v_min=-1.,v_max=1.;
     range()             = default;
     range(const range&) = default;
     range(range&&)      = default;
-    range(T x_min_,T x_max_,T v_min_,T v_max_)
+    range(_T x_min_,_T x_max_,_T v_min_,_T v_max_)
       : x_min(x_min_) , x_max(x_max_) ,
         v_min(v_min_) , v_max(v_max_)
     {}
   } range;
 
   field ()
-    : ublas::matrix<T>()
+    : ublas::matrix<_T>()
   {}
   
-  field ( typename ublas::matrix<T>::size_type size1 , typename ublas::matrix<T>::size_type size2 )
-    : ublas::matrix<T>(size1,size2)
+  field ( typename ublas::matrix<_T>::size_type size1 , typename ublas::matrix<_T>::size_type size2 )
+    : ublas::matrix<_T>(size1,size2)
   {}
 
   field ( const field &m )
-    : ublas::matrix<T>(m) , step(m.step) , range(m.range)
+    : ublas::matrix<_T>(m) , step(m.step) , range(m.range)
   {}
 
   template<class AE>
   field ( const ublas::matrix_expression<AE> &ae )
-    : ublas::matrix<T>(ae)
+    : ublas::matrix<_T>(ae)
   {}
 
-  field ( typename ublas::matrix<T>::size_type size1 , typename ublas::matrix<T>::size_type size2 , T dx , T dv )
-    : ublas::matrix<T>(size1,size2) , step(dx,dv) 
+  field ( typename ublas::matrix<_T>::size_type size1 , typename ublas::matrix<_T>::size_type size2 , _T dx , _T dv )
+    : ublas::matrix<_T>(size1,size2) , step(dx,dv) 
   {}
 
   ~field ()
@@ -88,7 +93,7 @@ struct field : public ublas::matrix<T>
   auto
   density () const
   {
-    static const ublas::scalar_vector<T> v(this->size2(),step.dv);
+    static const ublas::scalar_vector<_T> v(this->size2(),step.dv);
     return prod(*this,v);
   }
 
@@ -97,9 +102,9 @@ struct field : public ublas::matrix<T>
   auto
   moments () const
   { 
-    T v;
-    std::array<ublas::vector<T>,3> U = { ublas::vector<T>(this->size1(),0.) , ublas::vector<T>(this->size1(),0.) ,
-                                         ublas::vector<T>(this->size1(),0.) };
+    _T v;
+    std::array<ublas::vector<_T>,3> U = { ublas::vector<_T>(this->size1(),0.) , ublas::vector<_T>(this->size1(),0.) ,
+                                          ublas::vector<_T>(this->size1(),0.) };
 
     for ( auto i=0 ; i<this->size1() ; ++i )
       for ( auto k=0 ; k<this->size2() ; ++k )
@@ -115,23 +120,58 @@ struct field : public ublas::matrix<T>
   auto
   flux () const
   {
-    T v;
-    std::array<ublas::vector<T>,3> U = { ublas::vector<T>(this->size1(),0.) , ublas::vector<T>(this->size1(),0.) ,
-                                         ublas::vector<T>(this->size1(),0.) };
+    _T v;
+    std::array<ublas::vector<_T>,3> U = { ublas::vector<_T>(this->size1(),0.) , ublas::vector<_T>(this->size1(),0.) ,
+                                          ublas::vector<_T>(this->size1(),0.) };
 
     for ( auto i=0 ; i<this->size1() ; ++i )
       for ( auto k=0 ; k<this->size2() ; ++k )
       {
         v = k*step.dv+range.v_min;
-        U[0][i] += this->operator()(i,k)*v*step.dv;
-        U[1][i] += this->operator()(i,k)*SQ(v)*step.dv;
-        U[2][i] += 0.5*this->operator()(i,k)*CU(v)*step.dv;
+        U[0](i) += this->operator()(i,k)*v*step.dv;
+        U[1](i) += this->operator()(i,k)*SQ(v)*step.dv;
+        U[2](i) += 0.5*this->operator()(i,k)*CU(v)*step.dv;
       }
     return U;
   }
 #undef SQ 
 #undef CU 
+
+  template <direction::direction D>
+  inline typename std::enable_if< D == direction::x ,
+  typename ublas::matrix_vector_slice_periodic<ublas::matrix<_T>,direction::x> >::type
+  stencil ( typename ublas::matrix<_T>::size_type i , typename ublas::matrix<_T>::size_type k )
+  {
+    return ublas::matrix_vector_slice_periodic<ublas::matrix<_T>,direction::x>(*this,ublas::slice((i-2+this->size1())%this->size1(),1,5),ublas::slice(k,0,5));
+  }
+  
+  template <direction::direction D>
+  inline typename std::enable_if< D == direction::v ,
+  typename ublas::matrix_vector_slice_periodic<ublas::matrix<_T>,direction::v> >::type
+  stencil ( typename ublas::matrix<_T>::size_type i , typename ublas::matrix<_T>::size_type k )
+  {
+    return ublas::matrix_vector_slice_periodic<ublas::matrix<_T>,direction::v>(*this,ublas::slice(i,0,5),ublas::slice((k-2+this->size2())%this->size2(),1,5));
+  }
+
+
 };
+
+/*
+template<>
+template<typename _T> 
+typename ublas::matrix_vector_slice_periodic<ublas::matrix<_T>,direction::x>
+field<_T>::stencil<direction::x> ( typename ublas::matrix<_T>::size_type i , typename ublas::matrix<_T>::size_type k )
+{
+  return ublas::matrix_vector_slice_periodic<ublas::matrix<_T>,direction::x>(*this,ublas::slice(i-2,1,5),ublas::slice(k,0,5));
+}
+template<>
+template<typename _T>
+typename ublas::matrix_vector_slice_periodic<ublas::matrix<_T>,direction::v>
+field<_T>::stencil<direction::v> ( typename ublas::matrix<_T>::size_type i , typename ublas::matrix<_T>::size_type k )
+{
+  return ublas::matrix_vector_slice_periodic<ublas::matrix<_T>,direction::v>(*this,ublas::slice(i,0,5),ublas::slice(k-2,1,5));
+}
+*/
 
 template <typename _T>
 struct variabili
@@ -173,4 +213,7 @@ maxwellian ( const variabili<_T> &v , typename field<_T>::step step , typename f
 
   return M;
 }
+
+
+#endif
 
