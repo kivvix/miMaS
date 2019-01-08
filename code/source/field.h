@@ -3,6 +3,7 @@
 
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/io.hpp>
+#include <boost/math/constants/constants.hpp>
 
 /**
 # `field<T>`
@@ -131,4 +132,45 @@ struct field : public ublas::matrix<T>
 #undef SQ 
 #undef CU 
 };
+
+template <typename _T>
+struct variabili
+{
+  ublas::vector<_T> rho;
+  ublas::vector<_T> u;
+  ublas::vector<_T> T;
+
+  variabili ( std::array<ublas::vector<_T>,3> && U )
+    : rho(std::move(U[0])) , u(std::move(U[1])) , T(U[2].size())
+  {
+    for ( auto i=0 ; i<rho.size() ; ++i )
+    {
+      u(i) /= rho(i);
+      T(i)  = (U[2](i)-U[1](i)*U[1](i)/(2*rho(i)))/(0.5*rho(i));
+    }
+  }
+};
+
+// faire une factory initialisée par un step et un range (précalcul du vecteur de vitesses)
+// puis génération pour chaque triplet de variabili du champ de la maxwelienne associée
+template <typename _T>
+field<_T>
+maxwellian ( const variabili<_T> &v , typename field<_T>::step step , typename field<_T>::range range )
+{
+  field<_T> M((range.x_max-range.x_min)/step.dx,(range.v_max-range.v_min)/step.dv);
+  M.step = step; M.range = range;
+  
+  for ( auto i=0 ; i<M.size1() ; ++i )
+  {
+    auto tmp = v.rho(i)/sqrt(2.*boost::math::constants::pi<_T>()*v.T(i));
+    for ( auto k=0 ; k<M.size2() ; ++k )
+    {
+      auto vrel = (M.step.dv*k+M.range.v_min) - v.u(i);
+      auto alpha = -0.5*vrel*vrel/v.T(i);
+      M(i,k) = tmp*exp(alpha);
+    }
+  }
+
+  return M;
+}
 
