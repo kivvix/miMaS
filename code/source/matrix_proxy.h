@@ -43,7 +43,6 @@ class matrix_vector_slice_periodic<M,direction::x>:
      : matrix_vector_slice<M>(data,s1,s2)
     {}
 
-    //// CECI FONCTIONNE ENFIN UNIQUEMENT POUR L'OPÉRATEUR (), par contre je viens de me rendre compte que la majorité des autres fonctions liées au matrix_vector_slice utilisent les itérateurs qu'il peut y avoir dessus (itérateurs n'utilisant pas cet opérateur () mais leur propre accès aux données, ce qui est logique quand on y pense car on ne viendrait pas penser que quelqu'un souhaiterait accéder aux données autrement...)
 #ifndef BOOST_UBLAS_PROXY_CONST_MEMBER
     BOOST_UBLAS_INLINE
     typename matrix_vector_slice<M>::const_reference
