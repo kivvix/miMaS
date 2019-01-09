@@ -20,7 +20,7 @@ int main(int,char**)
   std::cout << m.flux()[0] << std::endl;
   std::cout << m.flux()[1] << std::endl;
   std::cout << m.flux()[2] << std::endl;
-  std::cout <<  m.stencil<direction::x>(0,0) << std::endl;
+  std::cout <<  m.stencil<direction::v>(0,0) << std::endl;
   auto tmp = m.stencil<direction::x>(0,0);
   for (ublas::matrix_vector_slice_periodic<ublas::matrix<double>,direction::x>::const_iterator it=tmp.cbegin();it<tmp.cend();++it)
     std::cout << *it << std::endl;

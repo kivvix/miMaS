@@ -17,7 +17,7 @@ using namespace boost::numeric;
 
 template < typename _T , direction::direction D >
 _T
-local_flux_p ( const typename ublas::matrix_vector_slice_periodic<ublas::matrix<_T>,D> & f_loc )
+local_flux_p ( const typename ublas::matrix_vector_slice_periodic<const ublas::matrix<_T>,D> & f_loc )
 {
   static const _T epsi = 1e-6;
   _T w0,w1,w2;
@@ -41,7 +41,7 @@ local_flux_p ( const typename ublas::matrix_vector_slice_periodic<ublas::matrix<
 
 template < typename _T , direction::direction D >
 _T
-local_flux_m ( const typename ublas::matrix_vector_slice_periodic<ublas::matrix<_T>,D> & f_loc )
+local_flux_m ( const typename ublas::matrix_vector_slice_periodic<const ublas::matrix<_T>,D> & f_loc )
 {
   static const _T epsi = 1e-6;
   _T w0,w1,w2;
@@ -79,7 +79,7 @@ index_direction<direction::v> ( int & i , int & k )
 { return k; }
 
 template < typename _T , direction::direction D >
-auto flux_p ( field<_T> & u , const ublas::vector<_T> & v )
+auto flux_p ( const field<_T> & u , const ublas::vector<_T> & v )
 {
   field<_T> fip12p(u.size1(),u.size2());
   fip12p.step = u.step; fip12p.range = u.range;
@@ -92,7 +92,7 @@ auto flux_p ( field<_T> & u , const ublas::vector<_T> & v )
   return fip12p;
 }
 template < typename _T , direction::direction D >
-auto flux_m ( field<_T> & u , const ublas::vector<_T> & v )
+auto flux_m ( const field<_T> & u , const ublas::vector<_T> & v )
 {
   field<_T> fip12m(u.size1(),u.size2());
   fip12m.step = u.step; fip12m.range = u.range;
@@ -167,7 +167,7 @@ flux_m<direction::v> ( const field<_T> & u , const ublas::vector<_T> & v )
 */
 template < typename _T >
 auto
-trp2D ( field<_T> & u , const ublas::vector<_T> & v , const ublas::vector<_T> & E )
+trp2D ( const field<_T> & u , const ublas::vector<_T> & v , const ublas::vector<_T> & E )
 {
   field<_T> trp(u.size1(),u.size2());
   trp.step = u.step; trp.range = u.range;

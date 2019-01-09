@@ -152,10 +152,10 @@ struct field : public ublas::matrix<_T>
 
   template <direction::direction D>
   inline typename std::enable_if< D == direction::x ,
-  typename ublas::matrix_vector_slice_periodic<ublas::matrix<_T>,direction::x> >::type
+  typename ublas::matrix_vector_slice_periodic<const ublas::matrix<_T>,direction::x> >::type
   stencil ( typename ublas::matrix<_T>::size_type i , typename ublas::matrix<_T>::size_type k ) const
   {
-    return ublas::matrix_vector_slice_periodic<ublas::matrix<_T>,direction::x>(*this,ublas::slice((i-2+this->size1())%this->size1(),1,5),ublas::slice(k,0,5));
+    return ublas::matrix_vector_slice_periodic<const ublas::matrix<_T>,direction::x>(*this,ublas::slice((i-2+this->size1())%this->size1(),1,5),ublas::slice(k,0,5));
   }
   template <direction::direction D>
   inline typename std::enable_if< D == direction::x ,
@@ -167,10 +167,10 @@ struct field : public ublas::matrix<_T>
   
   template <direction::direction D>
   inline typename std::enable_if< D == direction::v ,
-  typename ublas::matrix_vector_slice_periodic<ublas::matrix<_T>,direction::v> >::type
+  typename ublas::matrix_vector_slice_periodic<const ublas::matrix<_T>,direction::v> >::type
   stencil ( typename ublas::matrix<_T>::size_type i , typename ublas::matrix<_T>::size_type k ) const
   {
-    return ublas::matrix_vector_slice_periodic<ublas::matrix<_T>,direction::v>(*this,ublas::slice(i,0,5),ublas::slice((k-2+this->size2())%this->size2(),1,5));
+    return ublas::matrix_vector_slice_periodic<const ublas::matrix<_T>,direction::v>(*this,ublas::slice(i,0,5),ublas::slice((k-2+this->size2())%this->size2(),1,5));
   }
   template <direction::direction D>
   inline typename std::enable_if< D == direction::v ,
