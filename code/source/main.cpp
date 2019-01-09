@@ -19,14 +19,14 @@ int main(int,char**)
   std::cout << m.flux()[0] << std::endl;
   std::cout << m.flux()[1] << std::endl;
   std::cout << m.flux()[2] << std::endl;
-  std::cout <<  m.stencil<direction::x>(0,0) << std::endl;
+  std::cout <<  m.stencil<direction::v>(0,0) << std::endl;
   auto tmp = m.stencil<direction::v>(0,0);
-  for (auto it=tmp.begin();it<tmp.end();++it)
+  for (ublas::matrix_vector_slice_periodic<ublas::matrix<double>,direction::v>::const_iterator it=tmp.cbegin();it<tmp.cend();++it)
     std::cout << *it << std::endl;
   std::cout << "-- " << tmp.size() <<std::endl;
 
   for (auto k=0;k<tmp.size();++k)
-  {std::cout << k << " " ; std::cout<< tmp(k) << std::endl;}
+  {std::cout << k << " " ; std::cout<< tmp[k] << " " << tmp(k) << std::endl;}
   return 0;
 }
 
