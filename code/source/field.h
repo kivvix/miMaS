@@ -52,6 +52,12 @@ struct field : public ublas::matrix<_T>
     step(_T dx_,_T dv_)
       : dx(dx_) , dv(dv_)
     {}
+    step &
+    operator=(const step & rhs)
+    {
+      dx = rhs.dx; dv = rhs.dv;
+      return *this;
+    }
   } step;
   struct range
   {
@@ -64,6 +70,13 @@ struct field : public ublas::matrix<_T>
       : x_min(x_min_) , x_max(x_max_) ,
         v_min(v_min_) , v_max(v_max_)
     {}
+    range &
+    operator=(const range & rhs)
+    {
+      x_min = rhs.x_min; x_max = rhs.x_max;
+      v_min = rhs.v_min; v_max = rhs.v_max;
+      return *this;
+    }
   } range;
 
   field ()
@@ -140,6 +153,13 @@ struct field : public ublas::matrix<_T>
   template <direction::direction D>
   inline typename std::enable_if< D == direction::x ,
   typename ublas::matrix_vector_slice_periodic<ublas::matrix<_T>,direction::x> >::type
+  stencil ( typename ublas::matrix<_T>::size_type i , typename ublas::matrix<_T>::size_type k ) const
+  {
+    return ublas::matrix_vector_slice_periodic<ublas::matrix<_T>,direction::x>(*this,ublas::slice((i-2+this->size1())%this->size1(),1,5),ublas::slice(k,0,5));
+  }
+  template <direction::direction D>
+  inline typename std::enable_if< D == direction::x ,
+  typename ublas::matrix_vector_slice_periodic<ublas::matrix<_T>,direction::x> >::type
   stencil ( typename ublas::matrix<_T>::size_type i , typename ublas::matrix<_T>::size_type k )
   {
     return ublas::matrix_vector_slice_periodic<ublas::matrix<_T>,direction::x>(*this,ublas::slice((i-2+this->size1())%this->size1(),1,5),ublas::slice(k,0,5));
@@ -148,14 +168,43 @@ struct field : public ublas::matrix<_T>
   template <direction::direction D>
   inline typename std::enable_if< D == direction::v ,
   typename ublas::matrix_vector_slice_periodic<ublas::matrix<_T>,direction::v> >::type
+  stencil ( typename ublas::matrix<_T>::size_type i , typename ublas::matrix<_T>::size_type k ) const
+  {
+    return ublas::matrix_vector_slice_periodic<ublas::matrix<_T>,direction::v>(*this,ublas::slice(i,0,5),ublas::slice((k-2+this->size2())%this->size2(),1,5));
+  }
+  template <direction::direction D>
+  inline typename std::enable_if< D == direction::v ,
+  typename ublas::matrix_vector_slice_periodic<ublas::matrix<_T>,direction::v> >::type
   stencil ( typename ublas::matrix<_T>::size_type i , typename ublas::matrix<_T>::size_type k )
   {
     return ublas::matrix_vector_slice_periodic<ublas::matrix<_T>,direction::v>(*this,ublas::slice(i,0,5),ublas::slice((k-2+this->size2())%this->size2(),1,5));
   }
 
-
+/*
+  template <direction::direction D>
+  ublas::matrix_vector_slice_periodic<ublas::matrix<_T>,D>
+  stencil ( typename ublas::matrix<_T>::size_type i , typename ublas::matrix<_T>::size_type k );
+*/
 };
 
+/*
+template < typename _T >
+template <>
+ublas::matrix_vector_slice_periodic<ublas::matrix<_T>,D>
+field<_T>::stencil<direction::x>( typename ublas::matrix<_T>::size_type i , typename ublas::matrix<_T>::size_type k )
+{
+  return ublas::matrix_vector_slice_periodic<ublas::matrix<_T>,direction::x>(*this,ublas::slice((i-2+this->size1())%this->size1(),1,5),ublas::slice(k,0,5));
+}
+
+template < typename _T >
+template <>
+ublas::matrix_vector_slice_periodic<ublas::matrix<_T>,D>
+field<_T>::stencil<direction::x>( typename ublas::matrix<_T>::size_type i , typename ublas::matrix<_T>::size_type k )
+{
+  return ublas::matrix_vector_slice_periodic<ublas::matrix<_T>,direction::v>(*this,ublas::slice(i,0,5),ublas::slice((k-2+this->size2())%this->size2(),1,5));
+}
+*/
+  
 /*
 template<>
 template<typename _T> 
