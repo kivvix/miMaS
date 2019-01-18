@@ -1,6 +1,11 @@
 #ifndef _MATRIX_PROXY_H_
 #define _MATRIX_PROXY_H_
 
+#include <sstream>
+#include <algorithm>
+#include <iterator>
+#include <iostream>
+
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/io.hpp>
 #include <boost/numeric/ublas/matrix_proxy.hpp>
@@ -31,30 +36,44 @@ namespace boost { namespace numeric { namespace ublas {
       typename matrix_vector_slice<M>::reference
       operator () (typename matrix_vector_slice<M>::size_type i) const;
 #endif
+
+      std::string
+      str() const
+      {
+        std::stringstream ss;
+        for ( auto i=0 ; i<this->size() ; ++i )
+        { ss << this->operator()(i) << " "; }
+        return ss.str();
+      }
   };
 
 template <class M>
-class matrix_vector_slice_periodic<M,direction::x>:
-  public matrix_vector_slice<M>
+class matrix_vector_slice_periodic<M,direction::x>
+: public matrix_vector_slice<M>
 {
   public:
     BOOST_UBLAS_INLINE
     matrix_vector_slice_periodic ( M &data, const typename ublas::matrix_vector_slice<M>::slice_type &s1, const typename ublas::matrix_vector_slice<M>::slice_type &s2)
-     : matrix_vector_slice<M>(data,s1,s2)
+      : matrix_vector_slice<M>(data,s1,s2)
     {}
+
+    BOOST_UBLAS_INLINE
+    matrix_vector_slice_periodic ( const matrix_vector_slice_periodic & rhs ) = default;
+    BOOST_UBLAS_INLINE
+    matrix_vector_slice_periodic ( matrix_vector_slice_periodic && rhs )      = default;
 
 #ifndef BOOST_UBLAS_PROXY_CONST_MEMBER
     BOOST_UBLAS_INLINE
     typename matrix_vector_slice<M>::const_reference
     operator () (typename matrix_vector_slice<M>::size_type i) const
     {
-      return ublas::matrix_vector_slice<M>::data()( (this->start1()+i*this->stride1())%this->data().size1() , (this->start2()+i*this->stride2()) );
+      return ublas::matrix_vector_slice<M>::data()( (this->start1()+i*this->stride1()+this->data().size1())%this->data().size1() , (this->start2()+i*this->stride2()) );
     }
     BOOST_UBLAS_INLINE
     typename matrix_vector_slice<M>::reference
     operator () (typename matrix_vector_slice<M>::size_type i)
     {
-      return ublas::matrix_vector_slice<M>::data()( (this->start1()+i*this->stride1())%this->data().size1() , (this->start2()+i*this->stride2()) );
+      return ublas::matrix_vector_slice<M>::data()( (this->start1()+i*this->stride1()+this->data().size1())%this->data().size1() , (this->start2()+i*this->stride2()) );
     }
 
     BOOST_UBLAS_INLINE
@@ -101,7 +120,9 @@ class matrix_vector_slice_periodic<M,direction::x>:
 
         typename matrix_vector_slice<M>::const_iterator::reference
         operator * () const
-        { return this->container_const_reference<matrix_vector_slice_periodic>::operator()()( this->index()%( this->container_const_reference<matrix_vector_slice_periodic>::operator()() .data().size1()) ); }
+        { return this->container_const_reference<matrix_vector_slice_periodic>::operator()()(
+            (this->index() + this->container_const_reference<matrix_vector_slice_periodic>::operator()().data().size1())%( this->container_const_reference<matrix_vector_slice_periodic>::operator()().data().size1())
+          ); }
     };
 
     BOOST_UBLAS_INLINE
@@ -135,16 +156,19 @@ class matrix_vector_slice_periodic<M,direction::x>:
         {}
         BOOST_UBLAS_INLINE
         iterator ( const typename matrix_vector_slice_periodic::iterator &it )
-          : container_reference<matrix_vector_slice_periodic>(it()) , matrix_vector_slice<M>::iterator(it)
+          : container_reference<matrix_vector_slice_periodic>(it.container_reference<matrix_vector_slice_periodic>::operator()()) , matrix_vector_slice<M>::iterator(it)
         {}
         BOOST_UBLAS_INLINE
-        iterator ( const matrix_vector_slice_periodic &mvs , const typename ublas::matrix_vector_slice<M>::iterator &it )
+        iterator ( matrix_vector_slice_periodic &mvs , const typename ublas::matrix_vector_slice<M>::iterator &it )
           : container_reference<matrix_vector_slice_periodic>(mvs) , matrix_vector_slice<M>::iterator(it)
         {}
 
         typename matrix_vector_slice<M>::iterator::reference
-        operator * () const
-        { return this->container_reference<matrix_vector_slice_periodic>::operator()()( this->index()%( this->container_reference<matrix_vector_slice_periodic>::operator()() .data().size1()) ); }
+        operator * () const 
+        { return this->container_reference<matrix_vector_slice_periodic>::operator()()(
+            (this->index() + this->container_reference<matrix_vector_slice_periodic>::operator()().data().size1())%( this->container_reference<matrix_vector_slice_periodic>::operator()().data().size1())
+          ); }
+        //{ return this->container_reference<matrix_vector_slice_periodic>::operator()()( this->index()%( this->container_reference<matrix_vector_slice_periodic>::operator()() .data().size1()) ); }
     };
 
     BOOST_UBLAS_INLINE
@@ -156,6 +180,15 @@ class matrix_vector_slice_periodic<M,direction::x>:
     iterator
     end ()
     { return iterator(*this,matrix_vector_slice<M>::end()); }
+    
+    std::string
+    str() const
+    {
+      std::stringstream ss;
+      for ( auto i=0 ; i<this->size() ; ++i )
+      { ss << this->operator()(i) << " "; }
+      return ss.str();
+    }
 };
 
 template <class M>
@@ -173,13 +206,13 @@ class matrix_vector_slice_periodic<M,direction::v>:
     typename matrix_vector_slice<M>::const_reference
     operator () (typename matrix_vector_slice<M>::size_type i) const
     {
-      return ublas::matrix_vector_slice<M>::data()( (this->start1()+i*this->stride1()) , (this->start2()+i*this->stride2())%this->data().size2()  );
+      return ublas::matrix_vector_slice<M>::data()( (this->start1()+i*this->stride1()) , (this->start2()+i*this->stride2()+this->data().size2())%this->data().size2()  );
     }
     BOOST_UBLAS_INLINE
     typename matrix_vector_slice<M>::reference
     operator () (typename matrix_vector_slice<M>::size_type i)
     {
-      return ublas::matrix_vector_slice<M>::data()( (this->start1()+i*this->stride1()) , (this->start2()+i*this->stride2())%this->data().size2()  );
+      return ublas::matrix_vector_slice<M>::data()( (this->start1()+i*this->stride1()) , (this->start2()+i*this->stride2()+this->data().size2())%this->data().size2()  );
     }
 
     BOOST_UBLAS_INLINE
@@ -195,7 +228,7 @@ class matrix_vector_slice_periodic<M,direction::v>:
     typename matrix_vector_slice<M>::reference
     operator () (typename matrix_vector_slice<M>::size_type i) const
     {
-      return ublas::matrix_vector_slice<M>::data()( (this->start1()+i*this->stride1()) , (this->start2()+i*this->stride2())%this->data().size2()  );
+      return ublas::matrix_vector_slice<M>::data()( (this->start1()+i*this->stride1()) , (this->start2()+i*this->stride2()+this->data().size2())%this->data().size2()  );
     }
 
     BOOST_UBLAS_INLINE
@@ -227,7 +260,10 @@ class matrix_vector_slice_periodic<M,direction::v>:
 
         typename matrix_vector_slice<M>::const_iterator::reference
         operator * () const
-        { return this->container_const_reference<matrix_vector_slice_periodic>::operator()()( this->index()%( this->container_const_reference<matrix_vector_slice_periodic>::operator()() .data().size2()) ); }
+        { return this->container_const_reference<matrix_vector_slice_periodic>::operator()()(
+            (this->index() + this->container_const_reference<matrix_vector_slice_periodic>::operator()().data().size2())%( this->container_const_reference<matrix_vector_slice_periodic>::operator()().data().size2())
+          ); }
+        //{ return this->container_const_reference<matrix_vector_slice_periodic>::operator()()( this->index()%( this->container_const_reference<matrix_vector_slice_periodic>::operator()() .data().size2()) ); }
     };
 
     BOOST_UBLAS_INLINE
@@ -261,16 +297,19 @@ class matrix_vector_slice_periodic<M,direction::v>:
         {}
         BOOST_UBLAS_INLINE
         iterator ( const typename matrix_vector_slice_periodic::iterator &it )
-          : container_reference<matrix_vector_slice_periodic>(it()) , matrix_vector_slice<M>::iterator(it)
+          : container_reference<matrix_vector_slice_periodic>(it.container_reference<matrix_vector_slice_periodic>::operator()()) , matrix_vector_slice<M>::iterator(it)
         {}
         BOOST_UBLAS_INLINE
-        iterator ( const matrix_vector_slice_periodic &mvs , const typename ublas::matrix_vector_slice<M>::iterator &it )
+        iterator ( matrix_vector_slice_periodic &mvs , const typename ublas::matrix_vector_slice<M>::iterator &it )
           : container_reference<matrix_vector_slice_periodic>(mvs) , matrix_vector_slice<M>::iterator(it)
         {}
 
         typename matrix_vector_slice<M>::iterator::reference
         operator * () const
-        { return this->container_reference<matrix_vector_slice_periodic>::operator()()( this->index()%( this->container_reference<matrix_vector_slice_periodic>::operator()() .data().size2()) ); }
+        { return this->container_reference<matrix_vector_slice_periodic>::operator()()(
+            (this->index() + this->container_reference<matrix_vector_slice_periodic>::operator()().data().size2())%( this->container_reference<matrix_vector_slice_periodic>::operator()().data().size2())
+          ); }
+        //{ return this->container_reference<matrix_vector_slice_periodic>::operator()()( this->index()%( this->container_reference<matrix_vector_slice_periodic>::operator()() .data().size2()) ); }
     };
 
     BOOST_UBLAS_INLINE
@@ -283,6 +322,14 @@ class matrix_vector_slice_periodic<M,direction::v>:
     end ()
     { return iterator(*this,matrix_vector_slice<M>::end()); }
 
+    std::string
+    str() const
+    {
+      std::stringstream ss;
+      for ( auto i=0 ; i<this->size() ; ++i )
+      { ss << this->operator()(i) << " "; }
+      return ss.str();
+    }
 };
 
 }}}

@@ -103,6 +103,18 @@ struct field : public ublas::matrix<_T>
   ~field ()
   {}
 
+  field &
+  operator = ( const field & rhs )
+  {
+    if ( this != &rhs )
+    {
+      this->ublas::matrix<_T>::operator=(rhs);
+      range = rhs.range;
+      step = rhs.step;
+    }
+    return *this;
+  }
+
   auto
   density () const
   {
@@ -119,7 +131,7 @@ struct field : public ublas::matrix<_T>
     std::array<ublas::vector<_T>,3> U = { ublas::vector<_T>(this->size1(),0.) , ublas::vector<_T>(this->size1(),0.) ,
                                           ublas::vector<_T>(this->size1(),0.) };
 
-    for ( auto i=0 ; i<this->size1() ; ++i )
+    for ( auto i=0 ; i<this->size1() ; ++i ) {
       for ( auto k=0 ; k<this->size2() ; ++k )
       {
         v = k*step.dv+range.v_min;
@@ -127,6 +139,7 @@ struct field : public ublas::matrix<_T>
         U[1][i] += this->operator()(i,k)*v*step.dv;
         U[2][i] += 0.5*this->operator()(i,k)*SQ(v)*step.dv;
       }
+    }
     return U;
   }
 
@@ -137,14 +150,14 @@ struct field : public ublas::matrix<_T>
     std::array<ublas::vector<_T>,3> U = { ublas::vector<_T>(this->size1(),0.) , ublas::vector<_T>(this->size1(),0.) ,
                                           ublas::vector<_T>(this->size1(),0.) };
 
-    for ( auto i=0 ; i<this->size1() ; ++i )
-      for ( auto k=0 ; k<this->size2() ; ++k )
-      {
+    for ( auto i=0 ; i<this->size1() ; ++i ) {
+      for ( auto k=0 ; k<this->size2() ; ++k ) {
         v = k*step.dv+range.v_min;
         U[0](i) += this->operator()(i,k)*v*step.dv;
         U[1](i) += this->operator()(i,k)*SQ(v)*step.dv;
         U[2](i) += 0.5*this->operator()(i,k)*CU(v)*step.dv;
       }
+    }
     return U;
   }
 #undef SQ 
@@ -164,7 +177,7 @@ struct field : public ublas::matrix<_T>
   {
     return ublas::matrix_vector_slice_periodic<ublas::matrix<_T>,direction::x>(*this,ublas::slice((i-2+this->size1())%this->size1(),1,5),ublas::slice(k,0,5));
   }
-  
+
   template <direction::direction D>
   inline typename std::enable_if< D == direction::v ,
   typename ublas::matrix_vector_slice_periodic<const ublas::matrix<_T>,direction::v> >::type
