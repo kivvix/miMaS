@@ -1,0 +1,51 @@
+createdAt: "2019-01-11T13:37:38.473Z"
+updatedAt: "2019-01-11T14:39:04.165Z"
+type: "MARKDOWN_NOTE"
+folder: "d100ebf6344246eb5804"
+title: "Implémentation SDD pour WENO et FFT"
+tags: []
+content: '''
+  # Implémentation SDD pour WENO et FFT
+  
+  Nous souhaitons principalement résoudre une équation du type :
+  
+  $$
+    \\partial_t f + v\\cdot\\nabla_x f + E\\cdot\\nabla_v f = 0
+  $$
+  
+  avec potentiellement $v$ en 1, 2 voir 3 dimensions, et pour le moment une limitation à $x$ en 1 dimension.
+  
+  > Pour éviter de réécrire des pans entiers de code et ne pas être trop contraint par la suite, il est intéressant de lister actuellement ce qui est nécessaire et potentiellement les besoins futurs. L'écriture de tests unitaires peut s'avéré intéressante pour ne plus se poser trop de questions sur le fonctionnement du code (en plus cela peut aussi servir de base d'exemple d'utilisation des fonctions/méthodes développées et réfléchir à comment s'assurer de leur bon fonctionnement).
+  
+  ## Gestion du champ
+  
+  Le champ $f$ représente la densité de particules dans l'espace des phases, on utilise alors un tableau en plusieurs dimensions pour le représenté d'un point de vue informatique. La classe `boost::multi_array<T,N>` semble convenir pour cela, et permet, contrairement aux classes de calcul matriciel, une augmentation du nombre de dimensions sans trop de problèmes.
+  
+  **Cahier des charges pour la classe `field` :**
+  
+  - [x] Représenté des données en au moins 2 dimensions, peu de modification pour les dimensions supérieurs : `boost::multi_array<T,N>`
+  - [x] Proposer des vues/*slices*/... des données pour sélectionner le *stencil* du schéma :  `boost::multi_array<T,N>::array_view<1>` (le *stencil* reste un tableau 1D quelque soit le nombres de dimensions considérées)
+  - [x] Gestion des conditions aux bords : utilisation d'un `boost::multi_array<T,N>::array_view<3>::type` pour la majorité des cas, et utiliser un tableau avec les valeurs $(f_{i,k})_{i,k}$ plutôt que les indices des données dans la matrice (conditions au bord autre périodique ou Neumann)
+  
+  Il est nécessaire d'ajouter à ceci la sauvegarde des informations de la grille de l'espace des phases $(\\Delta x,\\Delta v)$ ainsi $(x_{\\text{min}},x_{\\text{max}})\\times(v_{\\text{min}},v_{\\text{max}})$ (pour du 1D, prévoir plus pour plus tard). Ceci peut être géré de manière relativement simple dans 2 petites structures, principalement pour ne s'occuper que de 2 objets et non $3N_x + 3N_v$ réels.
+  
+  ## WENO
+  
+  Pour WENO on a besoin d'accéder aux données via des *stencils*, c'est pour cela que l'on inscrit ceci dans le cahier des charges de la classe `field`. On a pas tellement d'autres contraintes à imposer sur ce lot de fonctions (pas besoin d'écrire un foncteur car on n'a pas de données à stocker d'une itération à l'autre ou autre chose de bien particulier, peut-être l'allocation des tableaux contenant les $(f_{i\\pm\\frac{1}{2},k})_{i,k}$ et $(f_{i,k\\pm\\frac{1}{2}})_{i,k}$ mais il est peut-être plus intéressant de laisser le compilo savoir faire ce qu'il sait faire).
+  
+  ## FFT
+  
+  Apparemment `fftw` ferait l'affaire, et comme de nombreuses librairies avec un fort héritage `C`, il suffit de lui donner un pointeur vers le début des données. Je n'ai pas encore vérifier cela mais `boost::` doit proposer quelque chose dans `boost::multi_array<T,N>` pour accéder de manière brute aux données, sinon copier les données sorties d'un utiliser un `boost::multi_array<T,N>::array_view<1>`.
+  
+  ## RK$N$
+  
+  Il est sans doute intéressant d'écrire un foncteur pour RK$N$, allouant les tableaux pour le calcul de chaque étage en amont.
+  
+  ## Divers
+  
+  ### Maxwellienne
+  
+  Pour écrire la maxwellienne, il peut être intéressant d'écrire un foncteur, stockant le vecteur $v$ et d'autres paramètres.
+'''
+isStarred: false
+isTrashed: false

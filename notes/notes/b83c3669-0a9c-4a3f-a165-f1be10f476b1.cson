@@ -1,5 +1,5 @@
 createdAt: "2019-01-07T08:24:44.194Z"
-updatedAt: "2019-01-07T10:42:43.977Z"
+updatedAt: "2019-01-14T16:24:43.671Z"
 type: "MARKDOWN_NOTE"
 folder: "d100ebf6344246eb5804"
 title: "ToDo list"
@@ -10,19 +10,20 @@ content: '''
   # ToDo list
   
   - [x] Installer `boost` (et tester un premier programme avec `ublas`)
-  - [ ] Écrire une classe d'itérateur `stencil`
-  - [ ] Écrire un code de transport WENO
-  - [ ] Tester les perfs par rapport à une écriture mode `C`
-  - [ ] Chercher une librairie pour faire des FFT en `C++`
-  - [ ] Écrire un code de transport par FFT
-  - [ ] Écrire des schémas en temps
-  - [ ] Résolution de l'équation de Poisson par FFT (finition de la réécriture complète de miMaS en C++)
-  
-  Il est aussi envisageable d'effectuer des tests unitaires :
-  
-  - [ ] Classe `stencil`
+  - [x] Installer `fftw` (et tester un premier programme pour vérifier l'installation et options de compilation)
+  - [x] Classe `field` qui hérite de `boost::multi_array`
+  - [x] Extraction d'un *stencil* du champ
   - [ ] Transport WENO
   - [ ] Transport FFT
+  
+  ## Tests unitaires
+  
+  - [ ] Construction et accès aux données de `field`
+  - [ ] Calcul des moments
+  - [ ] Calcul du flux
+  - [ ] Calcul de $(\\rho,u,T)$ (depuis les moments)
+  - [ ] Calcul de la maxwellienne
+  - [ ] Retrouver l'ordre de WENO
   
 '''
 isStarred: false
