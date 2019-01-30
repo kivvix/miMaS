@@ -71,3 +71,19 @@ Nous souhaitons traiter des problèmes 1D$x$,$N_v$D$v$. La résolution en $x$ s'
 
 Pour des raisons de performance il est intéressant d'envoyer 6 itérateurs à une fonction `local_flux` pour calculer les valeurs de $f_{i,k+\frac{1}{2}}^+$ et $f_{i,k+\frac{1}{2}}^-$, et d'itérer dans un premier temps en $x$ (selon `i`).
 
+Bien qu'utilisant le même stencil, je n'ai pas souhaité évaluer simultanément $f_{i,k+\frac{1}{2}}^+$ et $f_{i,k-\frac{1}{2}}^-$ pour des raisons de gestion des conditions aux bords lors de l'approximation de la dérivée à l'aide des flux :
+
+$$
+  \partial_v f \approx E^+_i (f_{i,k+\frac{1}{2}}^+ - f_{i,k-\frac{1}{2}}^+) + E^-_i (f_{i,k+\frac{1}{2}}^- - f_{i,k-\frac{1}{2}}^-)
+$$
+
+l'évaluation aux bords `k=0` et `k=Nv` auraient nécessités des cas particulier, avec cette méthode seul le bord `k=0` est traité à part.
+
+Il est intéressant de stocker les flux $f_{i,k+\frac{1}{2}}^\pm$ dans un seul tableau de pairs : `fik12pm`, cela évite d'accéder à la mémoire au milieu de 2 tableaux, ainsi le stresse de la mémoire est (sans doute) plus faible.
+
+```c++
+  dvf[k][i] = Ep[i]*( fik12pm[k][i].first - fik12pm[k-1][i].first ) + Em[i]*( fik12pm[k][i].second - fik12pm[k-1][i].second );
+```
+
+> Pour obtenir facilement le tableau des $(f_{i,k})_i$ en `C++` il est nécessaire que le dernier indice soit celui que l'on veut de manière continue, ainsi `f[k]` représente le tableau souhaité.
+
