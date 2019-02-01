@@ -87,3 +87,7 @@ Il est intéressant de stocker les flux $f_{i,k+\frac{1}{2}}^\pm$ dans un seul t
 
 > Pour obtenir facilement le tableau des $(f_{i,k})_i$ en `C++` il est nécessaire que le dernier indice soit celui que l'on veut de manière continue, ainsi `f[k]` représente le tableau souhaité.
 
+Pour plus de facilité pour l'implémentation, et un potentiel passage aux dimensions suppérieurs ($N_v > 1$, mais toujours une seule dimension en position), il a été décidé d'utiliser la classe `boost::multi_array<T,NumDims>` (avec `NumDims = 1 + Nv`). Pour le stencil il est possible d'utiliser un `boost::zip_iterator` sur les 6 valeurs du stencil, et itéré dessus dans la direction $x$ pour calculer les $\left(f_{i,k+\frac{1}{2}}^+,f_{i,k+\frac{1}{2}}^-\right)_i$. Utiliser des itérateurs pour représenter le stencil ne limite pas à l'utilisation de données dans le cube de données, il est possible d'avoir un vecteur comportant les données au bord, voir un `constant_iterator` permettant d'itérer sur la même valeur..
+
+
+
