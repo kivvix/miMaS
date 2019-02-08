@@ -3,7 +3,7 @@
 Liste des choses à faire prochainement :
 
 - [x] Transport par WENO en C++ (utiliser la classe `multi_array` de `boost`)
-- [ ] Transport par FFT en C++ (utiliser `fftw`)
+- [x] Transport par FFT en C++ (utiliser `fftw`)
 - [ ] Écrire le schéma IFRKSSP(3,3) et IFRKSSP(4,3) correspondant
 
 Il est aussi envisageable d'effectuer des tests unitaires :
