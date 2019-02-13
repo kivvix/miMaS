@@ -20,6 +20,8 @@
 *.dylib
 *.dll
 
+*.dSYM
+
 # Fortran module files
 *.mod
 *.smod
