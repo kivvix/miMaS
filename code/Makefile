@@ -14,7 +14,7 @@ INC_FFTW  = /usr/local/Cellar/fftw/3.3.8/include
 LIB_FFTW  = fftw3
 
 INCLUDES = $(INC_BOOST) $(INC_FFTW) $(HEADER_dir)/..
-LIBS = $(PROJET) $(LIB_FFTW)
+LIBS = $(PROJET) $(LIB_FFTW) m
 
 ### Lists of files and flags for compilation ##########################
 SRC = $(wildcard $(SRC_dir)/*.cc)
@@ -30,7 +30,7 @@ ifeq ($(DEBUG_MODE),Y)
 	
 	COMPIL_mode = "\033[1mCompilation en mode debug\033[0m"
 else
-	CFLAGS += -O2
+	CFLAGS += -O3
 
 	COMPIL_mode = "\033[1mCompilation en mode release\033[0m"
 endif
@@ -73,7 +73,7 @@ mrproper : clean
 	@echo "\033[31;1m Suppression de la bibliothèque \033[0m"
 	rm -f $(LIB_dir)/lib$(PROJET).so
 
-coffe :
+coffee :
 	@echo " (\n  )\nc[]"
 
 ### test rules
@@ -81,6 +81,13 @@ a.out : $(LIB_dir)/lib$(PROJET).so $(INC) main.cc
 	@echo "\033[95m$@\033[0m"
 	$(CXX) $(CFLAGS) $(DEBUGFLAGS) -g main.cc $(foreach inc,$(INCLUDES),-I $(inc)) -L $(LIB_dir) $(foreach lib,$(LIBS),-l$(lib))
 
+trp.out : $(LIB_dir)/lib$(PROJET).so $(INC) trp.cc
+	@echo "\033[95m$@\033[0m"
+	$(CXX) $(CFLAGS) $(DEBUGFLAGS) -g trp.cc $(foreach inc,$(INCLUDES),-I $(inc)) -L $(LIB_dir) $(foreach lib,$(LIBS),-l$(lib)) -o $@
+
+trpv.out : $(LIB_dir)/lib$(PROJET).so $(INC) trpv.cc
+	@echo "\033[95m$@\033[0m"
+	$(CXX) $(CFLAGS) $(DEBUGFLAGS) -g trpv.cc $(foreach inc,$(INCLUDES),-I $(inc)) -L $(LIB_dir) $(foreach lib,$(LIBS),-l$(lib)) -o $@
 # écrire un foreach pour les includes, et un autre pour les libs
 # puis écrire un vrai makefile
 

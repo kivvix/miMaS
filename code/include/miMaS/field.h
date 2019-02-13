@@ -191,10 +191,10 @@ class field
     auto
     density () const
     {
-      ublas::vector<_T> rho(size(NumDimsV+1),0); // x direction is le last one
-      for ( auto kt=m_data.begin() ; kt!= m_data.end() ; ++kt ) {
-        for ( auto it=kt.begin(),i=0 ; it!=kt.end() ; ++it, ++i ) {
-          rho(i) += *it;
+      ublas::vector<_T> rho(size(NumDimsV),0); // x direction is le last one
+      for ( auto k=0 ; k<size(0) ; ++k ) {
+        for ( auto i=0 ; i<size(NumDimsV) ; ++i ) {
+          rho(i) += m_data[k][i]*step.dv;
         }
       }
       return rho;
@@ -204,15 +204,15 @@ class field
     moments () const
     {
       _T vk;
-      std::array<ublas::vector<_T>,3> U = { ublas::vector<_T>(size(NumDimsV+1),0.) ,
-                                            ublas::vector<_T>(size(NumDimsV+1),0.) ,
-                                            ublas::vector<_T>(size(NumDimsV+1),0.) };
+      std::array<ublas::vector<_T>,3> U = { ublas::vector<_T>(size(NumDimsV),0.) ,
+                                            ublas::vector<_T>(size(NumDimsV),0.) ,
+                                            ublas::vector<_T>(size(NumDimsV),0.) };
       for ( size_type k=0 ; k<size(0) ; ++k ) {
         vk = k*step.dv+range.v_min;
         for ( size_type i=0 ; i<size(1) ; ++i ) {
-          U[0][i] += m_data[k][i];
-          U[1][i] += vk*m_data[k][i];
-          U[1][i] += 0.5*vk*vk*m_data[k][i];
+          U[0][i] += m_data[k][i]*step.dv;
+          U[1][i] += vk*m_data[k][i]*step.dv;
+          U[1][i] += 0.5*vk*vk*m_data[k][i]*step.dv;
         }
       }
       return U;
@@ -222,15 +222,15 @@ class field
     flux () const
     {
       _T vk;
-      std::array<ublas::vector<_T>,3> U = { ublas::vector<_T>(size(NumDimsV+1),0.) ,
-                                            ublas::vector<_T>(size(NumDimsV+1),0.) ,
-                                            ublas::vector<_T>(size(NumDimsV+1),0.) };
+      std::array<ublas::vector<_T>,3> U = { ublas::vector<_T>(size(NumDimsV),0.) ,
+                                            ublas::vector<_T>(size(NumDimsV),0.) ,
+                                            ublas::vector<_T>(size(NumDimsV),0.) };
       for ( size_type k=0 ; k<size(0) ; ++k ) {
         vk = k*step.dv+range.v_min;
         for ( size_type i=0 ; i<size(1) ; ++i ) {
-          U[0][i] += vk*m_data[k][i];
-          U[1][i] += vk*vk*m_data[k][i];
-          U[1][i] += 0.5*vk*vk*vk*m_data[k][i];
+          U[0][i] += vk*m_data[k][i]*step.dv;
+          U[1][i] += vk*vk*m_data[k][i]*step.dv;
+          U[1][i] += 0.5*vk*vk*vk*m_data[k][i]*step.dv;
         }
       }
       return U;
