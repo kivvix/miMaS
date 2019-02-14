@@ -25,8 +25,11 @@ struct poisson
     : hE(nx) , kx(nx)
   {
     /* TODO: trouver un meilleur truc qu'avoir les modes stockés dans la classe de poisson */
-    for ( auto i=0 ; i<nx/2+1 ; ++i )   { kx[i] = 2.*math::pi<double>()*i/l; }
-    for ( auto i=0 ; i<((nx/2)) ; ++i ) { kx[i+nx/2+1] = -kx[nx/2-i]; }
+    //for ( auto i=0 ; i<nx/2+1 ; ++i )   { kx[i] = 2.*math::pi<double>()*i/l; }
+    //for ( auto i=0 ; i<((nx/2)) ; ++i ) { kx[i+nx/2+1] = -kx[nx/2-i]; }
+    for ( auto i=0 ; i<nx/2 ; ++i ) { kx[i] = 2.*math::pi<double>()*i/l; }
+    for ( int i=-nx/2 ; i<0 ; ++i ) { kx[nx+i] = 2.*math::pi<double>()*i/l; }
+    std::copy(kx.begin(),kx.end(),std::ostream_iterator<double>(std::cout," "));std::cout << std::endl;
   }
   ~poisson ()
   {}
