@@ -6,15 +6,11 @@
 
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/io.hpp>
-#include <boost/math/constants/constants.hpp>
 #include <boost/multi_array.hpp>
 
 #include <boost/iterator/zip_iterator.hpp>
 
-#include "direction.h"
-
 using namespace boost::numeric;
-namespace math = boost::math::constants;
 
 /*
 template < typename _T >
@@ -129,6 +125,26 @@ class field
     { return m_data[k]; }
 
 //// ITERATORS //////////////////////////
+    const auto
+    begin ( size_type k ) const
+    { return m_data[k].begin(); }
+    const auto
+    cbegin ( size_type k ) const
+    { return m_data[k].begin(); }
+    auto
+    begin ( size_type k )
+    { return m_data[k].begin(); }
+
+    const auto
+    end ( size_type k ) const
+    { return m_data[k].end(); }
+    const auto
+    cend ( size_type k ) const
+    { return m_data[k].end(); }
+    auto
+    end ( size_type k )
+    { return m_data[k].end(); }
+
     const auto
     begin_stencil ( size_type k ) const
     { return boost::make_zip_iterator(boost::make_tuple( m_data[k-2].begin() , m_data[k-1].begin() , m_data[k].begin() , m_data[k+1].begin() , m_data[k+2].begin() , m_data[k+3].begin() )); }

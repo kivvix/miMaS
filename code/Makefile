@@ -88,6 +88,11 @@ trp.out : $(LIB_dir)/lib$(PROJET).so $(INC) trp.cc
 trpv.out : $(LIB_dir)/lib$(PROJET).so $(INC) trpv.cc
 	@echo "\033[95m$@\033[0m"
 	$(CXX) $(CFLAGS) $(DEBUGFLAGS) -g trpv.cc $(foreach inc,$(INCLUDES),-I $(inc)) -L $(LIB_dir) $(foreach lib,$(LIBS),-l$(lib)) -o $@
+
+rotation.out : $(LIB_dir)/lib$(PROJET).so $(INC) rotation.cc
+	@echo "\033[95m$@\033[0m"
+	$(CXX) $(CFLAGS) $(DEBUGFLAGS) -g rotation.cc $(foreach inc,$(INCLUDES),-I $(inc)) -L $(LIB_dir) $(foreach lib,$(LIBS),-l$(lib)) -o $@
+
 # écrire un foreach pour les includes, et un autre pour les libs
 # puis écrire un vrai makefile
 

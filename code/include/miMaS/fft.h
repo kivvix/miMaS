@@ -1,32 +1,34 @@
 #ifndef _FTTRP_H_
 #define _FTTRP_H_
 
-#include <algorithm>
-#include <iostream>
-#include <iterator>
-#include <vector>
-
-#include <boost/numeric/ublas/matrix.hpp>
-#include <boost/numeric/ublas/io.hpp>
-#include <boost/math/constants/constants.hpp>
-#include <boost/multi_array.hpp>
-
 #include <fftw3.h>
 
-#include "direction.h"
-#include "field.h"
 #include "array_view.h"
-
-#define REAL 0
-#define IMAG 1
-
-using namespace boost::numeric;
-namespace math = boost::math::constants;
 
 namespace fft {
 
 enum complex_part { re=0, im=1 };
 
+/*
+  class: spectrum
+  brief: la classe `spectrum` est un *wrapper* pour un signal réel 1D depuis `fftw`
+
+  La classe contient seulement le tableau des coefficients de la FFT.
+  On initialise le spectre en fonction de la taille des données en
+  entrée, puis on appelle la méthode `spectrum::fft()` sur le signal
+  dont on veut la transformée. On peut utiliser la structure `spectrum`
+  comme un tableau (héritage de la structure `tools::array_view<T>`
+  avec le type `T=fftw_complex` qui représente un complexe dans `fftw`.
+  L'accès à ce complexe s'effectue par `spectre[i]` on accède à la
+  partie réelle ou imaginaire à l'aide de l'énumération `complex_part`,
+  `spectre[i][fft::re]` ou `spectre[i][fft:im]` (avec `fft::re=0` et
+  `fft::im=1`).
+  La gestion de la mémoire (allocation et libération) est transparente
+  pour l'utilisateur, tout s'effectue dans le constructeur et
+  destructeur.
+
+  TODO: il semblerait en voyant le code de Lukas que std::complex<double> et fftw_complex se castent facilement ensemble, cela peut simplifier l'écriture des manipulations des coefficients de Fourier (pour Poisson et Lawson)
+*/
 struct spectrum
   : public tools::array_view<fftw_complex>
 {
@@ -53,89 +55,6 @@ struct spectrum
     fftw_execute(pI); fftw_destroy_plan(pI);
     for ( std::size_t i=0 ; i<this->size() ; ++i,++it )
       { *it /= this->size(); }
-  }
-};
-
-
-template < typename _T , std::size_t NumDimsV >
-struct fft_x
-{
-  boost::multi_array<fftw_complex * , NumDimsV> spectrum;
-  ublas::vector<_T> kx;
-  _T l;
-  std::size_t nx;
-
-  template < typename ExtentList >
-  fft_x ( ExtentList const& sizes , std::size_t const Nx , _T L )
-    : spectrum(sizes) , kx(Nx) , l(L) , nx(Nx)
-  {
-    for ( auto k=0 ; k<spectrum.shape()[0] ; ++k ) {
-      spectrum[k] = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*(Nx));
-    }
-
-    //std::generate(kx.begin(),kx.end(),[](){return 42.;});
-    for ( auto i=0 ; i<Nx/2+1 ; ++i )   { kx[i] = i/l; }
-    for ( auto i=0 ; i<((Nx/2)) ; ++i ) { kx[i+Nx/2+1] = -kx[Nx/2-i]; }
-    /*kx[Nx/2] = 0.;
-    for ( auto i=0 ; i<((Nx/2)-1) ; ++i )
-      { kx[i+1+Nx/2] = -kx[Nx/2-i-1]; }*/
-    //for ( auto i=0 ; i<Nx ; ++i ) { std::cout << kx[i] << " "; } std::cout << std::endl;
-  }
-
-  ~fft_x ()
-  {
-    for ( auto k=0 ; k<spectrum.shape()[0] ; ++k )
-      { fftw_free(spectrum[k]); }
-  }
-/*
-  auto
-  fft ()
-  {
-    boost::multi_array<fftw_complex * , NumDimsV> s;
-    for ( auto k=0 ; k<spectrum.shape()[0] ; ++k ) {
-      s[k] = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*(nx));
-    }
-    fftw_plan p = fftw_plan_dft_r2c_1d(kx.size(),&uk[0],s[k],FFTW_ESTIMATE);
-    fftw_execute(p);
-    return s;
-  }
-
-  auto
-  ifft ()
-  {}
-*/
-  auto
-  operator () ( field<_T,NumDimsV> const& u , ublas::vector<_T> const& v , _T dt )
-  {
-    field<_T,NumDimsV> trp(tools::array_view<const std::size_t>(u.shape(),NumDimsV),u.step,u.range);
-
-    for ( auto k=0 ; k<u.size(0) ; ++k ) {
-      ublas::vector<_T> uk(kx.size()); std::copy(u[k].begin(),u[k].end(),uk.begin());
-      fftw_plan p = fftw_plan_dft_r2c_1d(kx.size(),&uk[0],spectrum[k],FFTW_ESTIMATE);
-      fftw_execute(p);
-
-      // do something with spectrum
-      
-      for ( auto i=0 ; i<kx.size() ; ++i ) {
-        auto re = spectrum[k][i][REAL], im = spectrum[k][i][IMAG];
-        spectrum[k][i][REAL] = std::cos(kx[i]*v[k]*dt)*re + std::sin(kx[i]*v[k]*dt)*im; // Re(spectrum[k][i])
-        spectrum[k][i][IMAG] = std::cos(kx[i]*v[k]*dt)*im - std::sin(kx[i]*v[k]*dt)*re; // Im(spectrum[k][i])
-      }
-
-      fftw_plan pI = fftw_plan_dft_c2r_1d(kx.size(),spectrum[k],&trp[k][0],FFTW_PRESERVE_INPUT);
-      fftw_execute(pI);
-
-      for ( auto i=0 ; i<trp[k].size() ; ++i ) { // t=trp[k].begin() ; it!=trp[k].end() ; ++it ) {
-        //*it /= l;
-        //*it /= trp[k].size();
-        trp[k][i] = trp[k][i]/trp[k].size();
-      }
-      //std::cout << trp[k].size() << " " << kx.size() << " " << nx << " " << u.size(NumDimsV) << " " << spectrum.shape()[1] << "\n";
-
-      fftw_destroy_plan(p); fftw_destroy_plan(pI);
-    }
-
-    return trp;
   }
 };
 

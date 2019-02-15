@@ -2,8 +2,6 @@
 #define _POISSON_H_
 
 #include <algorithm>
-#include <iostream>
-#include <iterator>
 
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/io.hpp>
@@ -11,9 +9,9 @@
 
 #include <fftw3.h>
 
-#include "field.h"
-#include "array_view.h"
 #include "fft.h"
+
+namespace math = boost::math::constants;
 
 template < typename _T >
 struct poisson
@@ -29,8 +27,8 @@ struct poisson
     //for ( auto i=0 ; i<((nx/2)) ; ++i ) { kx[i+nx/2+1] = -kx[nx/2-i]; }
     for ( auto i=0 ; i<nx/2 ; ++i ) { kx[i] = 2.*math::pi<double>()*i/l; }
     for ( int i=-nx/2 ; i<0 ; ++i ) { kx[nx+i] = 2.*math::pi<double>()*i/l; }
-    std::copy(kx.begin(),kx.end(),std::ostream_iterator<double>(std::cout," "));std::cout << std::endl;
   }
+
   ~poisson ()
   {}
 

@@ -9,7 +9,6 @@
 
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/io.hpp>
-#include <boost/math/constants/constants.hpp>
 #include <boost/multi_array.hpp>
 
 #include <boost/iterator/zip_iterator.hpp>
@@ -17,9 +16,6 @@
 
 #include "field.h"
 #include "array_view.h"
-
-#include <boost/type_index.hpp>
-
 
 namespace weno {
 
@@ -51,8 +47,8 @@ local_flux ( boost::zip_iterator<IteratorTuple> const& f_it )
 
   w0p = 0.1/(SQ( epsi + w0p )); w1p = 0.6/(SQ( epsi + w1p )); w2p = 0.3/(SQ( epsi + w2p ));
 
-  _T sum_w = w0p+w1p+w2p;
-  w0p /= sum_w; w1p /= sum_w; w2p /= sum_w;
+  _T sum_wp = w0p+w1p+w2p;
+  w0p /= sum_wp; w1p /= sum_wp; w2p /= sum_wp;
 
   _T fikp12p = w0p*( (2./6.)*f_it->template get<0>() - (7./6.)*f_it->template get<1>() + (11./6.)*f_it->template get<2>() )
              + w1p*(-(1./6.)*f_it->template get<1>() + (5./6.)*f_it->template get<2>() +  (2./6.)*f_it->template get<3>() )
@@ -63,10 +59,10 @@ local_flux ( boost::zip_iterator<IteratorTuple> const& f_it )
   _T w1m = (13./12.)*SQ( f_it->template get<2>() - 2.*f_it->template get<3>() + f_it->template get<4>() ) + 0.25*SQ(    f_it->template get<2>()                              -    f_it->template get<4>() );
   _T w2m = (13./12.)*SQ( f_it->template get<1>() - 2.*f_it->template get<2>() + f_it->template get<3>() ) + 0.25*SQ(    f_it->template get<1>() - 4.*f_it->template get<2>() + 3.*f_it->template get<3>() );
 
-  w0m = 0.1/SQ(w0m+epsi); w1m = 0.6/SQ(w1m+epsi); w2m = 0.3/SQ(w2m+epsi);
+  w0m = 0.1/SQ( epsi + w0m ); w1m = 0.6/SQ( epsi + w1m ); w2m = 0.3/SQ( epsi + w2m );
 
-  sum_w = w0m+w1m+w2m;
-  w0m /= sum_w; w1m /= sum_w; w2m /= sum_w;
+  _T sum_wm = w0m+w1m+w2m;
+  w0m /= sum_wm; w1m /= sum_wm; w2m /= sum_wm;
 
   _T fikp12m = w2m*(-(1./6.)*f_it->template get<1>() + (5./6.)*f_it->template get<2>() + (2./6.)*f_it->template get<3>() )
              + w1m*( (2./6.)*f_it->template get<2>() + (5./6.)*f_it->template get<3>() - (1./6.)*f_it->template get<4>() )
