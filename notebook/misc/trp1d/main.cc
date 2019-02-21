@@ -34,6 +34,11 @@ main (int,char**)
     for ( auto i=0;i<n;++i ) { u0[i] = std::cos(2.*i*dx); }
     return u0;
   };
+  auto cosHF_0 = [&](std::size_t n)->std::valarray<double> {
+    std::valarray<double> u0(n);
+    for ( auto i=0;i<n;++i ) { u0[i] = std::cos(10.*i*dx); }
+    return u0;
+  };
 
   auto chapi_chap0 = [&](std::size_t n)->std::valarray<double> {
     std::valarray<double> u0(n);
@@ -45,8 +50,7 @@ main (int,char**)
     return u0;
   };
 
-  auto u_0 = chapi_chap0;
-
+  auto u_0 = cosHF_0;
 
   auto dx_y = [&,count=0]( auto const& x ) mutable { std::stringstream ss; ss<<dx*count++<<" "<<x; return ss.str(); };
 	std::ofstream of;
