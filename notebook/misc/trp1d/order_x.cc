@@ -22,9 +22,9 @@ trp_error ( std::valarray<double> const& u0 , std::valarray<double> const& uf , 
   return err;
 }
 
-struct err {
+struct error {
   template<typename It>
-  err(It first , It last, double dx)
+  error(It first , It last, double dx)
   {
     e_1  = std::abs(*std::max_element( first , last , [](double a,double b){return (std::abs(a) < std::abs(b));} ));
     e_oo =   std::accumulate( first , last , 0. , [&](double a,double b){return a+std::abs(b)*dx; } );
@@ -34,9 +34,9 @@ struct err {
 };
 
 std::ostream&
-operator << ( std::ostream & os , err const& e )
+operator << ( std::ostream & os , error const& err )
 {
-  os << e.e_1 << " " << e.e_oo; 
+  os << err.e_1 << " " << err.e_oo; 
   return os;
 }
 
@@ -63,7 +63,7 @@ main (int,char**)
     std::valarray<double> u0(n);
     std::generate(std::begin(u0),std::end(u0),[&,count=0]()mutable{ return std::cos(2.*(count++)*_dx); });
     std::valarray<double> err_weno = trp_error( u0 , u0 , rk::rk33<double,bweno_t> , Lbweno , 1. , Tf , _dx , dt );
-    std::cout << u0.size() << " "  << _dx << " " << dt << " " << err(std::begin(err_weno),std::end(err_weno),_dx) << std::endl;
+    std::cout << u0.size() << " "  << _dx << " " << dt << " " << error(std::begin(err_weno),std::end(err_weno),_dx) << std::endl;
   }
 
   return 0;

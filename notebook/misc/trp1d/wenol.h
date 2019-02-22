@@ -12,17 +12,17 @@ template < typename _T >
 std::pair<_T,_T>
 local_flux ( _T uim2 , _T uim1 , _T ui , _T uip1 , _T uip2 , _T uip3 )
 {
-  _T w0p = 0.1, w1p = 0.6, w2p = 0.3;
+  _T w0p = _T{0.1}, w1p = _T{0.6}, w2p = _T{0.3};
 
-  _T fip12p = w0p*( (2./6.)*uim2 - (7./6.)*uim1 + (11./6.)*ui   )
-            + w1p*(-(1./6.)*uim1 + (5./6.)*ui   +  (2./6.)*uip1 )
-            + w2p*( (2./6.)*ui   + (5./6.)*uip1 -  (1./6.)*uip2 );
+  _T fip12p = w0p*( (_T{2.}/_T{6.})*uim2 - (_T{7.}/_T{6.})*uim1 + (_T{11.}/_T{6.})*ui   )
+            + w1p*(-(_T{1.}/_T{6.})*uim1 + (_T{5.}/_T{6.})*ui   +  (_T{2.}/_T{6.})*uip1 )
+            + w2p*( (_T{2.}/_T{6.})*ui   + (_T{5.}/_T{6.})*uip1 -  (_T{1.}/_T{6.})*uip2 );
 
   _T w0m = 0.1, w1m = 0.6, w2m = 0.3;
 
-  _T fip12m = w2m*(-(1./6.)*uim1 + (5./6.)*ui   + (2./6.)*uip1 )
-            + w1m*( (2./6.)*ui   + (5./6.)*uip1 - (1./6.)*uip2 )
-            + w0m*((11./6.)*uip1 - (7./6.)*uip2 + (2./6.)*uip3 );
+  _T fip12m = w2m*(-(_T{1.}/_T{6.})*uim1 + (_T{5.}/_T{6.})*ui   + (_T{2.}/_T{6.})*uip1 )
+            + w1m*( (_T{2.}/_T{6.})*ui   + (_T{5.}/_T{6.})*uip1 - (_T{1.}/_T{6.})*uip2 )
+            + w0m*((_T{11.}/_T{6.})*uip1 - (_T{7.}/_T{6.})*uip2 + (_T{2.}/_T{6.})*uip3 );
 
   return std::make_pair(fip12p,fip12m);
 }
@@ -35,8 +35,8 @@ du ( Container const& u , _T const& v , _T dx )
   std::size_t N = u.size();
 
   std::pair<_T,_T> fim12,fip12;
-  _T vp = std::max(v,0.);
-  _T vm = std::min(v,0.);
+  _T vp = std::max(v,_T{0.});
+  _T vm = std::min(v,_T{0.});
 
   //i=0;
   fim12 = local_flux( u[(-3+N)%N],u[(-2+N)%N],u[(-1+N)%N],u[0],u[1],u[2] );

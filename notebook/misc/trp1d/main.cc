@@ -49,13 +49,18 @@ main (int,char**)
     for (    ;i<n    ;++i ) { u0[i] = 0.;       }
     return u0;
   };
+  auto cren0 = [&,count=0]()mutable->double {
+    if ( (count++)*dx < 1. ) { return 2.; }
+    return 1.;
+  };
 
-  auto u_0 = cosHF_0;
+  auto u_0 = cren0;
 
   auto dx_y = [&,count=0]( auto const& x ) mutable { std::stringstream ss; ss<<dx*count++<<" "<<x; return ss.str(); };
 	std::ofstream of;
     
-  u = u_0(N);
+  //u = u_0(N);
+  std::generate(std::begin(u),std::end(u),u_0);
   of.open("init.dat");
 	std::transform( std::begin(u) , std::end(u) , std::ostream_iterator<std::string>(of,"\n") , dx_y );
 	of.close();
@@ -68,13 +73,14 @@ main (int,char**)
 
   std::cout << "WENO" << std::endl;
   for ( auto i_t=0 ; i_t*dt < Tf ; ++i_t )
-    { u = rk::rk33(u,Lweno,1.,dx,dt); }
+    { u = rk::rk53(u,Lweno,1.,dx,dt); }
   of.open("vp_weno.dat");
 	std::transform( std::begin(u) , std::end(u) , std::ostream_iterator<std::string>(of,"\n") , dx_y );
 	of.close();
 
   std::cout << "BWENO" << std::endl;
-  u = u_0(N);
+  //u = u_0(N);
+  std::generate(std::begin(u),std::end(u),u_0);
   for ( auto i_t=0 ; i_t*dt < Tf ; ++i_t )
     { u = rk::rk33(u,Lbweno,1.,dx,dt); }
   of.open("vp_bweno.dat");
@@ -82,7 +88,8 @@ main (int,char**)
 	of.close();
 
   std::cout << "WENOl" << std::endl;
-  u = u_0(N);
+  //u = u_0(N);
+  std::generate(std::begin(u),std::end(u),u_0);
   for ( auto i_t=0 ; i_t*dt < Tf ; ++i_t )
     { u = rk::rk33(u,Lwenol,1.,dx,dt); }
   of.open("vp_wenol.dat");
