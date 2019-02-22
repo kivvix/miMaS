@@ -63,15 +63,15 @@ struct rksn {
 int
 main (int,char**)
 {
-  const std::size_t N=1000;
+  const std::size_t N=10000;
   const long double pi = 3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214808651328230664709384460955058223172535940812848111745028410270l;
-  const long double dx = 2.l*pi/N , dt = 1.l/N;
-  const long double Tf = 1e5*dt;
+  const long double dx = 2.l*pi/N , dt = 10.l/N;
+  const long double Tf = 1e0*dt;
   const std::size_t n_iter = 3;
 
 	std::size_t count;
-  auto cos0 = [&,count=0]()mutable{ return std::cos(4.l*(count++)*dx); };
-  auto cosf = [&,count=0]()mutable{ return std::cos(4.l*((count++)*dx-Tf)); };
+  auto cos0 = [&,count=0]()mutable{ return std::cos(7.l*(count++)*dx); };
+  auto cosf = [&,count=0]()mutable{ return std::cos(7.l*((count++)*dx-Tf)); };
 
   auto chapi_chap0 = [&,count=0]()mutable->long double {
     if ( count*dx<1. ) { ++count; return 1.;       }
