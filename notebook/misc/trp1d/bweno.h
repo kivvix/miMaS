@@ -8,15 +8,15 @@ template <typename _T>
 _T
 beta ( _T ujm2 , _T ujm1 , _T uj , _T ujp1 , _T ujp2 )
 {
-  _T D14uj = 1./12.*( -ujp2 +  8.*ujp1          -  8.*ujm1 + ujm2 );
-	_T D24uj = 1./12.*( -ujp2 + 16.*ujp1 - 30.*uj + 16.*ujm1 - ujm2 );
-	_T D32uj =  1./2.*(  ujp2 -  2.*ujp1          +  2.*ujm1 - ujm2 );
-	_T D42uj =        (  ujp2 -  4.*ujp1 +  6.*uj -  4.*ujm1 + ujm2 );
+  _T D14uj = _T{1.}/_T{12.}*( -ujp2 +  _T{8.}*ujp1              -  _T{8.}*ujm1 + ujm2 );
+	_T D24uj = _T{1.}/_T{12.}*( -ujp2 + _T{16.}*ujp1 - _T{30.}*uj + _T{16.}*ujm1 - ujm2 );
+	_T D32uj =  _T{1.}/_T{2.}*(  ujp2 -  _T{2.}*ujp1              +  _T{2.}*ujm1 - ujm2 );
+	_T D42uj =                (  ujp2 -  _T{4.}*ujp1 +  _T{6.}*uj -  _T{4.}*ujm1 + ujm2 );
 
-	return D14uj * ( D14uj +       D24uj +   1./3.*D32uj +    1./12.*D42uj )
-	               + D24uj*( 4./3.*D24uj +   5./4.*D32uj +     2./5.*D42uj )
-	                             + D32uj*( 83./60.*D32uj +   23./18.*D42uj )
-	                                                     + 437./315.*D42uj*D42uj;
+	return D14uj * ( D14uj +               D24uj +   _T{1.}/_T{3.}*D32uj +    _T{1.}/_T{12.}*D42uj )
+	               + D24uj*( _T{4.}/_T{3.}*D24uj +   _T{5.}/_T{4.}*D32uj +     _T{2.}/_T{5.}*D42uj )
+	                                     + D32uj*( _T{83.}/_T{60.}*D32uj +   _T{23.}/_T{18.}*D42uj )
+	                                                               + _T{437.}/_T{315.}*D42uj*D42uj;
 }
 
 template <typename _T>
@@ -26,8 +26,8 @@ ubjm12 ( _T ujm3 , _T ujm2 , _T ujm1 , _T uj , _T ujp1 , _T ujp2 , bool velocity
   _T betaL = beta(ujm3,ujm2,ujm1,uj,ujp1);
   _T betaR = beta(ujm2,ujm1,uj,ujp1,ujp2);
 
-  _T aL = 0.5/(1e-6 + betaL);
-  _T aR = 0.5/(1e-6 + betaR);
+  _T aL = _T{0.5}/(_T{1e-6} + betaL);
+  _T aR = _T{0.5}/(_T{1e-6} + betaR);
 
   _T wtL = aL/(aL+aR);
   _T wtR = aR/(aL+aR);
@@ -36,8 +36,8 @@ ubjm12 ( _T ujm3 , _T ujm2 , _T ujm1 , _T uj , _T ujp1 , _T ujp2 , bool velocity
   _T wR = std::min(wtL,wtR);
   if (!velocity_is_positive) { std::swap(wL,wR); }
 
-  _T uL = 1./60.*( -3*ujp1 + 27.*uj   + 47.*ujm1 - 13*ujm2 + 2*ujm3 );
-  _T uR = 1./60.*(  2.*ujp2 - 13.*ujp1 + 47.*uj   + 27*ujm1 - 3*ujm2 );
+  _T uL = _T{1.}/_T{60.}*( -_T{3.}*ujp1 + _T{27.}*uj   + _T{47.}*ujm1 - _T{13.}*ujm2 + _T{2.}*ujm3 );
+  _T uR = _T{1.}/_T{60.}*(  _T{2.}*ujp2 - _T{13.}*ujp1 + _T{47.}*uj   + _T{27.}*ujm1 - _T{3.}*ujm2 );
 
   return wL*uL + wR*uR;
 }
