@@ -1,12 +1,12 @@
 # À propos de la résolution numérique de Vlasov-Poisson
 
-> Il ne s'agit pas ici d'effectuer toute la théorie de la résolutino de l'équation de Vlasov-Poisson mais plus de présenter les choix que nous avons pu effectuer dans la résolution numérique, et les implications que cela peut avoir sur l'implémentation.
+> Il ne s'agit pas ici d'effectuer toute la théorie de la résolution de l'équation de Vlasov-Poisson mais plus de présenter les choix que nous avons pu effectuer dans la résolution numérique, et les implications que cela peut avoir sur l'implémentation.
 
 Nous souhaitons résoudre un problème du type :
 
 $$
   \begin{cases}
-    \partial_t f + v\partial_x f + E\nabla_v\cdot f = 0 \\
+    \partial_t f + v\partial_x f + E\cdot\nabla_v f = 0 \\
     \partial_x E = \rho - 1
   \end{cases}
 $$
@@ -26,16 +26,16 @@ $$
 Par conséquent, pour pouvoir choisir le plus grand pas de temps possible il est intéressant de résoudre différemment le transport dans la direction $x$, à savoir à l'aide d'une transformée de Fourier :
 
 $$
-  \partial_t \hat{f} + vi\kappa\hat{f} + \widehat{(E\nabla_v\cdot f)} = 0
+  \partial_t \hat{f} + vi\kappa\hat{f} + \widehat{(E\cdot\nabla_v f)} = 0
 $$
 
 Ce que l'on peut réécrire, pour utiliser un schéma Runge-Kutta exponentiel :
 
 $$
-  \partial_t (e^{iv\kappa t}\hat{f}) = - e^{iv\kappa t}\widehat{(E\nabla_v\cdot f)}
+  \partial_t (e^{iv\kappa t}\hat{f}) = - e^{iv\kappa t}\widehat{(E\cdot\nabla_v f)}
 $$
 
-Ainsi nous n'utiliserons le schéma WENO uniquement pour l'approximation de $E\nabla_v\cdot f$, donc pour estimer une dérivée en vitesse. La CFL sera alors guidé par $E_{\text{max}}$ qui n'est que de quelques unités. Ainsi le pas de temps $\Delta t$ imposé par cette CFL est le plus grand possible.
+Ainsi nous n'utiliserons le schéma WENO uniquement pour l'approximation de $E\cdot\nabla_v f$, donc pour estimer une dérivée en vitesse. La CFL sera alors guidé par $E_{\text{max}}$ qui n'est que de quelques unités. Ainsi le pas de temps $\Delta t$ imposé par cette CFL est le plus grand possible.
 
 Cette équation peut être résolu par la méthode IFRK ([Isherwood L. et al](https://github.com/Kivvix/miMaS/blob/master/bibliography/pdf/2018-Isherwood(1).pdf)), qui est une méthode exponentielle basée sur RK, ainsi le schéma pour résoudre $u_t = Lu + N(u)$ où $L$ représente un opérateur linéaire (dans notre cas la multiplication par $-vi\kappa$) et $N$ un opérateur non-linéaire (ici le schéma WENO sur la FFT inverse), le schéma IFRK basé sur RK de Shu-Osher s'écrit alors :
 
@@ -50,16 +50,16 @@ $$
 En appliquant ce schéma à notre équation :
 
 $$
-  \partial_t \hat{f} + vi\kappa\hat{f} + \widehat{(E\nabla_v\cdot f)} = 0
+  \partial_t \hat{f} + vi\kappa\hat{f} + \widehat{(E\cdot\nabla_v f)} = 0
 $$
 
 on obtient le schéma suivant :
 
 $$
   \begin{aligned}
-    \hat{f}^{(1)} &= e^{-vi\kappa\Delta t}\hat{f}^n + e^{-vi\kappa\Delta t}\Delta t \widehat{(-E\nabla_v\cdot f^n)^{\texttt{W}}} \\
-    \hat{f}^{(2)} &= \frac{3}{4}e^{-\frac{1}{2}vi\kappa\Delta t}\hat{f}^n + \frac{1}{4}e^{\frac{1}{2}vi\kappa\Delta t}f^{(1)} + \frac{1}{4}e^{\frac{1}{2}vi\kappa\Delta t}\Delta t \widehat{(-E\nabla_v\cdot f^{(1)})^{\texttt{W}}} \\
-    \hat{f}^{n+1} &= \frac{1}{3}e^{-vi\kappa\Delta t}\hat{f}^n + \frac{2}{3}e^{-\frac{1}{2}vi\kappa\Delta t}f^{(2)} + \frac{2}{3}e^{-\frac{1}{2}vi\kappa\Delta t}\Delta t \widehat{(-E\nabla_v\cdot f^{(2)})^{\texttt{W}}}
+    \hat{f}^{(1)} &= e^{-vi\kappa\Delta t}\hat{f}^n + e^{-vi\kappa\Delta t}\Delta t \widehat{(-E\cdot\nabla_v f^n)^{\texttt{W}}} \\
+    \hat{f}^{(2)} &= \frac{3}{4}e^{-\frac{1}{2}vi\kappa\Delta t}\hat{f}^n + \frac{1}{4}e^{\frac{1}{2}vi\kappa\Delta t}f^{(1)} + \frac{1}{4}e^{\frac{1}{2}vi\kappa\Delta t}\Delta t \widehat{(-E\cdot\nabla_v f^{(1)})^{\texttt{W}}} \\
+    \hat{f}^{n+1} &= \frac{1}{3}e^{-vi\kappa\Delta t}\hat{f}^n + \frac{2}{3}e^{-\frac{1}{2}vi\kappa\Delta t}f^{(2)} + \frac{2}{3}e^{-\frac{1}{2}vi\kappa\Delta t}\Delta t \widehat{(-E\cdot\nabla_v f^{(2)})^{\texttt{W}}}
   \end{aligned}
 $$
 
@@ -87,7 +87,7 @@ Il est intéressant de stocker les flux $f_{i,k+\frac{1}{2}}^\pm$ dans un seul t
 
 > Pour obtenir facilement le tableau des $(f_{i,k})_i$ en `C++` il est nécessaire que le dernier indice soit celui que l'on veut de manière continue, ainsi `f[k]` représente le tableau souhaité.
 
-Pour plus de facilité pour l'implémentation, et un potentiel passage aux dimensions suppérieurs ($N_v > 1$, mais toujours une seule dimension en position), il a été décidé d'utiliser la classe `boost::multi_array<T,NumDims>` (avec `NumDims = 1 + Nv`). Pour le stencil il est possible d'utiliser un `boost::zip_iterator` sur les 6 valeurs du stencil, et itéré dessus dans la direction $x$ pour calculer les $\left(f_{i,k+\frac{1}{2}}^+,f_{i,k+\frac{1}{2}}^-\right)_i$. Utiliser des itérateurs pour représenter le stencil ne limite pas à l'utilisation de données dans le cube de données, il est possible d'avoir un vecteur comportant les données au bord, voir un `constant_iterator` permettant d'itérer sur la même valeur..
+Pour plus de facilité pour l'implémentation, et un potentiel passage aux dimensions supérieurs ($N_v > 1$, mais toujours une seule dimension en position), il a été décidé d'utiliser la classe `boost::multi_array<T,NumDims>` (avec `NumDims = 1 + Nv`). Pour le stencil il est possible d'utiliser un `boost::zip_iterator` sur les 6 valeurs du stencil, et itéré dessus dans la direction $x$ pour calculer les $\left(f_{i,k+\frac{1}{2}}^+,f_{i,k+\frac{1}{2}}^-\right)_i$. Utiliser des itérateurs pour représenter le stencil ne limite pas à l'utilisation de données dans le cube de données, il est possible d'avoir un vecteur comportant les données au bord, voir un `constant_iterator` permettant d'itérer sur la même valeur..
 
 
 
