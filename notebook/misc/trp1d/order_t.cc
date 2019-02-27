@@ -30,8 +30,8 @@ struct error {
   template<typename It>
   error(It first , It last, _T dx)
   {
-    e_1  = std::abs(*std::max_element( first , last , [](_T a,_T b){return (std::abs(a) < std::abs(b));} ));
-    e_oo =   std::accumulate( first , last , _T{0.} , [&](_T a,_T b){return a+std::abs(b)*dx; } );
+    e_1  = std::accumulate( first , last , _T{0.} , [&](_T a,_T b){return a+std::abs(b)*dx; } );
+    e_oo = std::abs(*std::max_element( first , last , [](_T a,_T b){return (std::abs(a) < std::abs(b));} ));
   }
 
   _T e_1,e_oo;
@@ -67,7 +67,7 @@ main (int,char**)
   const long double pi = 3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214808651328230664709384460955058223172535940812848111745028410270l;
   const long double dx = 2.l*pi/N , dt = 10.l/N;
   const long double Tf = 1e0*dt;
-  const std::size_t n_iter = 3;
+  const std::size_t n_iter = 5;
 
 	std::size_t count;
   auto cos0 = [&,count=0]()mutable{ return std::cos(7.l*(count++)*dx); };
@@ -90,6 +90,7 @@ main (int,char**)
   std::generate(std::begin(u0),std::end(u0),cos0);
   std::generate(std::begin(uf),std::end(uf),cosf);
 
+  std::cout << Tf << std::endl;
   std::vector<rksn> time_methods;
   time_methods.push_back(rksn(    "RK (8,6)",8,rk::rk86<long double,weno_t>,"rk86"));
   time_methods.push_back(rksn(    "RK (7,6)",7,rk::rk76<long double,weno_t>,"rk76"));
@@ -118,7 +119,7 @@ main (int,char**)
 */
   for ( auto const& rk : time_methods ) {
     std::cout << rk.name << std::endl; of.open("rk_err/"+rk.tag+".dat");
-    for ( int n=1;n<n_iter;++n ) {
+    for ( int n=1;n<=n_iter;++n ) {
       long double _dt = dt/n;
       std::valarray<long double> err_weno = trp_error( u0,uf, rk.func , Lweno , 1.l , Tf , dx , _dt );
       std::cout << "\r " << n << std::flush;
