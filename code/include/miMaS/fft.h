@@ -51,7 +51,7 @@ struct spectrum
   void
   ifft ( Iterator it )
   {
-    fftw_plan pI = fftw_plan_dft_c2r_1d(this->size(),(fftw_complex*)this->front(),it,FFTW_PRESERVE_INPUT);
+    fftw_plan pI = fftw_plan_dft_c2r_1d(this->size(),(fftw_complex*)this->front(),it,FFTW_ESTIMATE);
     fftw_execute(pI); fftw_destroy_plan(pI);
     for ( std::size_t i=0 ; i<this->size() ; ++i,++it )
       { *it /= this->size(); }

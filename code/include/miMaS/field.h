@@ -43,6 +43,9 @@ class field
     typedef typename boost::multi_array< _T , NumDimsV+1 >::index                  index; 
     typedef typename boost::multi_array< _T , NumDimsV+1 >::extent_range           extent_range;
     typedef typename boost::multi_array< _T , NumDimsV+1 >::const_reverse_iterator const_reverse_iterator;
+
+    typedef typename boost::multi_array< _T , NumDimsV+1 >::index_gen   index_gen;
+    typedef typename boost::multi_array< _T , NumDimsV+1 >::index_range index_range;
     
     template <std::size_t NDims>
     struct const_array_view {
@@ -123,6 +126,16 @@ class field
     auto
     operator [] ( size_type k )
     { return m_data[k]; }
+
+    template <int NDims>
+    const auto
+    operator [] ( boost::detail::multi_array::index_gen<NumDimsV+1,NDims> const& indices ) const
+    { return m_data[indices]; }
+
+    template <int NDims>
+    auto
+    operator [] ( boost::detail::multi_array::index_gen<NumDimsV+1,NDims> const& indices )
+    { return m_data[indices]; }
 
 //// ITERATORS //////////////////////////
     const auto

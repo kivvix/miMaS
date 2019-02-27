@@ -119,7 +119,7 @@ template < typename _T , std::size_t NumDimsV >
 auto
 trp_v ( field<_T,NumDimsV> const& u , ublas::vector<_T> const& E )
 {
-  field<_T,NumDimsV> trp(tools::array_view<const std::size_t>(u.shape(),NumDimsV));
+  field<_T,NumDimsV> trp(tools::array_view<const std::size_t>(u.shape(),NumDimsV+1)); // !?? NumDimsV+1
 
   ublas::vector<_T> Em(E.size()) , Ep(E.size());
 
