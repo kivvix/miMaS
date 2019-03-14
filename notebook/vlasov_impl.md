@@ -87,7 +87,39 @@ Il est intéressant de stocker les flux $f_{i,k+\frac{1}{2}}^\pm$ dans un seul t
 
 > Pour obtenir facilement le tableau des $(f_{i,k})_i$ en `C++` il est nécessaire que le dernier indice soit celui que l'on veut de manière continue, ainsi `f[k]` représente le tableau souhaité.
 
-Pour plus de facilité pour l'implémentation, et un potentiel passage aux dimensions supérieurs ($N_v > 1$, mais toujours une seule dimension en position), il a été décidé d'utiliser la classe `boost::multi_array<T,NumDims>` (avec `NumDims = 1 + Nv`). Pour le stencil il est possible d'utiliser un `boost::zip_iterator` sur les 6 valeurs du stencil, et itéré dessus dans la direction $x$ pour calculer les $\left(f_{i,k+\frac{1}{2}}^+,f_{i,k+\frac{1}{2}}^-\right)_i$. Utiliser des itérateurs pour représenter le stencil ne limite pas à l'utilisation de données dans le cube de données, il est possible d'avoir un vecteur comportant les données au bord, voir un `constant_iterator` permettant d'itérer sur la même valeur..
+Pour plus de facilité pour l'implémentation, et un potentiel passage aux dimensions supérieurs ($N_v > 1$, mais toujours une seule dimension en position), il a été décidé d'utiliser la classe `boost::multi_array<T,NumDims>` (avec `NumDims = 1 + Nv`). Pour le stencil il est possible d'utiliser un `boost::zip_iterator` sur les 6 valeurs du stencil, et itéré dessus dans la direction $x$ pour calculer les $\left(f_{i,k+\frac{1}{2}}^+,f_{i,k+\frac{1}{2}}^-\right)_i$. Utiliser des itérateurs pour représenter le stencil ne limite pas à l'utilisation de données dans le cube de données, il est possible d'avoir un vecteur comportant les données au bord, voir un `constant_iterator` permettant d'itérer sur la même valeur.
 
+> Un petit *benchmark* du code avec `callgrind` m'a permis de remarquer qu'un peu plus de la moitié du temps est passé dans le calcul du WENO. Le *callgraph* est plutôt équilibré dans l'ensemble, ce qui est bon signe. Le goulot d'étranglement dans la méthode WENO est uniquement le déréférencement du `boost::zip_iterator`, une structure *maison* avec seulement 5 itérateurs qui permet simplement d'encapsuler ceci permettrait peut-être de gagner un peu de temps.
 
+## Choix du schéma en temps
+
+Nous choisissons un schéma de Lawson comme discrétisation en temps. L'obtention d'un tel schéma s'obtient lorsque l'on cherche à résoudre un problème du type :
+
+$$
+  \dot{u} = Lu + N(u)
+$$
+
+dans le cas de Vlasov-Poisson, $u \mapsto \hat{f}$, $L\mapsto i v_k \kappa$ et $N(u)\mapsto \widehat{(E\cdot\nabla_v f)}$. Les schémas de Lawson correspondent à l'écriture d'un schéma RK sur :
+
+$$
+  \partial_t(e^{-Lt}u) = e^{-Lt}N(u)
+$$
+
+Par substitution, il est possible de *Lawsoniser* tout type de schéma RK de manière algorithmique. Un script a donc été écrit pour effectuer ce processus de manière automoatique sur des schémas à plusieurs étages : RK(3,3), RK(5,3), RK(4,4) , RK(4,4) règle des 3/8, DP5 et RK(8,6).
+
+Nous savons que notre système préserve l'énergie $H(t)$ :
+
+$$
+  H(t) = \int v^2f\,\mathrm{d}v\mathrm{d}x + \int E^2\,\mathrm{d}x
+$$
+
+Il est donc possible de mesurer au cours du temps l'erreur relative effectuée sur cette quantité :
+
+$$
+  \mathcal{E}(\Delta t) = \left|\left|\left(\frac{H(t^n)-H(0)}{H(0)}\right)_{\Delta t}\right|\right|_{\infty}
+$$
+
+Nous pouvons ainsi mesurer l'ordre de chacun de nos schémas, et comparer les erreurs en fonction du coût numérique $\frac{\Delta t}{s}$ où $s$ correspond au nombre d'étages de la méthode considérée. On obtient alors sur le cas test BoT le graphique suivant.
+
+![Erreur des schémas en fonction du coût numérique](img/oHdt.png)
 
