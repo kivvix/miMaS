@@ -139,6 +139,17 @@ class field
 
 //// ITERATORS //////////////////////////
     const auto
+    origin () const
+    { return m_data.origin(); }
+    auto
+    origin ()
+    { return m_data.origin(); }
+
+    const auto
+    num_elements () const
+    { return m_data.num_elements(); }
+
+    const auto
     begin ( size_type k ) const
     { return m_data[k].begin(); }
     const auto
@@ -291,5 +302,28 @@ operator << ( std::ostream & os , field<_T,NumDimsV> const& f )
   }
   return os;
 }
+
+#define SQ(X) ((X)*(X))
+
+template < typename _T , std::size_t NumDimsV >
+_T
+energy ( field<_T,NumDimsV> const& f , ublas::vector<_T> const& E )
+{
+  _T H = 0.;
+
+  for ( typename field<_T,NumDimsV>::size_type k=0 ; k<f.size(0) ; ++k ) {
+    for ( typename field<_T,NumDimsV>::size_type i=0 ; i<f.size(1) ; ++i ) {
+      H += SQ(k*f.step.dv+f.range.v_min) * f[k][i] * f.step.dv*f.step.dx;
+    }
+  }
+
+  for ( auto it=E.begin() ; it!=E.end() ; ++it ) {
+    H += SQ(*it)*f.step.dx;
+  }
+
+  return H;
+}
+
+#undef SQ
 
 #endif

@@ -73,32 +73,18 @@ mrproper : clean
 	@echo "\033[31;1m Suppression de la bibliothèque \033[0m"
 	rm -f $(LIB_dir)/lib$(PROJET).so
 
+nuke : mrproper
+	@$(echo) "  ,-*\n (_)\n"
+	rm -f *.out
+
 coffee :
 	@echo " (\n  )\nc[]"
 
-### test rules
-#a.out : main.cc $(LIB_dir)/lib$(PROJET).so $(INC)
-#	@echo "\033[95m$@\033[0m"
-#	$(CXX) $(CFLAGS) $(DEBUGFLAGS) -g $< $(foreach inc,$(INCLUDES),-I $(inc)) -L $(LIB_dir) $(foreach lib,$(LIBS),-l$(lib))
-#
-#trp.out : $(LIB_dir)/lib$(PROJET).so $(INC) trp.cc
-#	@echo "\033[95m$@\033[0m"
-#	$(CXX) $(CFLAGS) $(DEBUGFLAGS) -g trp.cc $(foreach inc,$(INCLUDES),-I $(inc)) -L $(LIB_dir) $(foreach lib,$(LIBS),-l$(lib)) -o $@
-#
-#trpv.out : $(LIB_dir)/lib$(PROJET).so $(INC) trpv.cc
-#	@echo "\033[95m$@\033[0m"
-#	$(CXX) $(CFLAGS) $(DEBUGFLAGS) -g trpv.cc $(foreach inc,$(INCLUDES),-I $(inc)) -L $(LIB_dir) $(foreach lib,$(LIBS),-l$(lib)) -o $@
-#
-#rotation.out : $(LIB_dir)/lib$(PROJET).so $(INC) rotation.cc
-#	@echo "\033[95m$@\033[0m"
-#	$(CXX) $(CFLAGS) $(DEBUGFLAGS) -g rotation.cc $(foreach inc,$(INCLUDES),-I $(inc)) -L $(LIB_dir) $(foreach lib,$(LIBS),-l$(lib)) -o $@
-#
-#strang.out : $(LIB_dir)/lib$(PROJET).so $(INC) strang.cc
-#	@echo "\033[95m$@\033[0m"
-#	$(CXX) $(CFLAGS) $(DEBUGFLAGS) -g strang.cc $(foreach inc,$(INCLUDES),-I $(inc)) -L $(LIB_dir) $(foreach lib,$(LIBS),-l$(lib)) -o $@
+### compilation rules
 
 %.out : %.cc $(LIB_dir)/lib$(PROJET).so $(INC)
 	@echo "\033[95m$@\033[0m"
 	$(CXX) $(CFLAGS) $(DEBUGFLAGS) -g $< $(foreach inc,$(INCLUDES),-I $(inc)) -L $(LIB_dir) $(foreach lib,$(LIBS),-l$(lib)) -o $@
+	@echo "\033[1mcompilation done\033[0m"
 
 
