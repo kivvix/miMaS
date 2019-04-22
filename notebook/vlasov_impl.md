@@ -123,3 +123,28 @@ Nous pouvons ainsi mesurer l'ordre de chacun de nos schémas, et comparer les er
 
 ![Erreur des schémas en fonction du coût numérique](img/oHdt.png)
 
+On observe une saturation de l'erreur à $10^{-10}$ ce qui correspond *grosso-modo* à $\mathcal{O}(\Delta v^6)$ soit l'erreur commise par le schéma WENO d'ordre 5 ($\Delta v = \frac{24}{1024} \approx 2.34\cdot 10^{-2}$, donc $\Delta v^6 \approx 1.6\cdot 10^{-10}$).
+
+# À Propos de la discrétisation d'Euler pour la modélisation *micro-macro*
+
+Lors de mon stage j'ai déjà pu remarquer des défauts du schéma d'ordre 2 dans la discrétisation de la partie *macro* de la modélisation hybride fluide-cinétique. Par conséquent nous allons monter en ordre en utilisant, comme la partie cinétique, un schéma WENO d'ordre 5 en espace, et utiliser la même discrétisation en temps que la partie cinétique. La même discrétisation en temps permet de résoudre simultanément les 2 modèles et ne pas risquer de *déphasage* entre le champ électrique d'une partie et de l'autre.
+
+On peut discuter le choix d'un schéma d'ordre aussi élevé pour la partie *macro* mais nous avons observé empiriquement que l'ordre 2 n'était pas satisfaisant, et qu'il était intéressant de monter en ordre. Le nombre de points dans la direction $x$ restant normalement relativement faible (par exemple l'obtention des ordres en temps a été obtenu avec une grille $N_x\times N_v = 42\times 1024$, un schéma d'ordre aussi élevé en 1D ne sera *a priori* pas le goulot d'étranglement de la simulation.
+
+## Résolution des équations d'Euler
+
+Les équations d'Euler :
+
+$$
+  U_t + \nabla_x\cdot\mathcal{F}(U) = S(U)
+$$
+
+avec $U = (\rho,\rho u,e)^{\textsf{T}}$,
+
+$$
+  \mathcal{F}(U) = \begin{pmatrix}
+    \rho u       \\
+    \rho u^2 + p \\
+    u(e+p)
+  \end{pmatrix}
+$$

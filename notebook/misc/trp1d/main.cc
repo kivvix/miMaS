@@ -15,8 +15,8 @@ main (int,char**)
 {
   const std::size_t N=100;
   const double pi = 3.141592653589;
-  const double dx = 2.*pi/N , dt = 1.*dx;
-  const double Tf = 2.*pi;
+  const double dx = 1./N ; double dt;
+  const double Tf = .5; //*pi;
 
   std::valarray<double> u(N);
 	std::size_t count;
@@ -53,8 +53,11 @@ main (int,char**)
     if ( (count++)*dx < 1. ) { return 2.; }
     return 1.;
   };
+  auto cos0 = [&,count=0]()mutable->double {
+    return std::cos(4.*pi*(count++)*dx);
+  };
 
-  auto u_0 = cren0;
+  auto u_0 = cos0;
 
   auto dx_y = [&,count=0]( auto const& x ) mutable { std::stringstream ss; ss<<dx*count++<<" "<<x; return ss.str(); };
 	std::ofstream of;
@@ -71,13 +74,35 @@ main (int,char**)
 
   std::cout << dx << " " << dt << std::endl;
 
+  dt = 1.606*dx;
+  std::generate(std::begin(u),std::end(u),u_0);
   std::cout << "WENO" << std::endl;
   for ( auto i_t=0 ; i_t*dt < Tf ; ++i_t )
-    { u = rk::rk53(u,Lweno,1.,dx,dt); }
-  of.open("vp_weno.dat");
+    { u = rk::rk33(u,Lweno,1.,dx,dt); }
+  of.open("weno1.dat");
 	std::transform( std::begin(u) , std::end(u) , std::ostream_iterator<std::string>(of,"\n") , dx_y );
 	of.close();
 
+  dt = 1.8*dx;
+  std::generate(std::begin(u),std::end(u),u_0);
+  std::cout << "WENO" << std::endl;
+  for ( auto i_t=0 ; i_t*dt < Tf ; ++i_t )
+    { u = rk::rk33(u,Lweno,1.,dx,dt); }
+  of.open("weno2.dat");
+	std::transform( std::begin(u) , std::end(u) , std::ostream_iterator<std::string>(of,"\n") , dx_y );
+	of.close();
+
+  dt = 1.433*dx;
+  std::generate(std::begin(u),std::end(u),u_0);
+  std::cout << "WENO" << std::endl;
+  for ( auto i_t=0 ; i_t*dt < Tf ; ++i_t )
+    { u = rk::rk33(u,Lweno,1.,dx,dt); }
+  of.open("weno3.dat");
+	std::transform( std::begin(u) , std::end(u) , std::ostream_iterator<std::string>(of,"\n") , dx_y );
+	of.close();
+
+
+/*
   std::cout << "BWENO" << std::endl;
   //u = u_0(N);
   std::generate(std::begin(u),std::end(u),u_0);
@@ -95,7 +120,7 @@ main (int,char**)
   of.open("vp_wenol.dat");
 	std::transform( std::begin(u) , std::end(u) , std::ostream_iterator<std::string>(of,"\n") , dx_y );
 	of.close();
-
+*/
 
   return 0;
 }
