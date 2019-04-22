@@ -69,7 +69,7 @@ class field
       _T v_min=-1. , v_max=1.; // default value
     } range;
 
-//// CONSTRUCTORS ///////////////////////
+    //// CONSTRUCTORS ///////////////////////
     field ()
       : m_data()
     {}
@@ -93,12 +93,12 @@ class field
       : m_data(sizes) , step(s) , range(r)
     {}
 
-//// DESTRUCTORS ////////////////////////
+    //// DESTRUCTORS ////////////////////////
     ~field()
     {}
 
 
-//// OPERATORS //////////////////////////
+    //// OPERATORS //////////////////////////
     field &
     operator = ( field const& rhs )
     {
@@ -110,16 +110,20 @@ class field
       return *this;
     }
 
-//// CAPACITY ///////////////////////////
+    //// CAPACITY ///////////////////////////
     inline size_type
     size ( size_type n ) const
     { return m_data.shape()[n]; }
+
+    inline size_type
+    size_x () const
+    { return m_data.shape()[NumDimsV]; }
 
     auto
     shape () const
     { return m_data.shape(); }
 
-//// ELEMENT ACCESS /////////////////////
+    //// ELEMENT ACCESS /////////////////////
     const auto
     operator [] ( size_type k ) const
     { return m_data[k]; }
@@ -137,7 +141,7 @@ class field
     operator [] ( boost::detail::multi_array::index_gen<NumDimsV+1,NDims> const& indices )
     { return m_data[indices]; }
 
-//// ITERATORS //////////////////////////
+    //// ITERATORS //////////////////////////
     const auto
     origin () const
     { return m_data.origin(); }
@@ -169,6 +173,8 @@ class field
     end ( size_type k )
     { return m_data[k].end(); }
 
+    // FONCTIONS DÉPENDANT DE NumDimsV
+    // ici NumDimsV = 1
     const auto
     begin_stencil ( size_type k ) const
     { return boost::make_zip_iterator(boost::make_tuple( m_data[k-2].begin() , m_data[k-1].begin() , m_data[k].begin() , m_data[k+1].begin() , m_data[k+2].begin() , m_data[k+3].begin() )); }
@@ -227,11 +233,11 @@ class field
       return boost::make_zip_iterator(boost::make_tuple( m_data[km2].end() , m_data[km1].end() , m_data[k].end() , m_data[kp1].end() , m_data[kp2].end() , m_data[kp3].end() ));
     }
 
-//// OTHER METHODS //////////////////////
+    //// OTHER METHODS //////////////////////
     auto
     density () const
     {
-      ublas::vector<_T> rho(size(NumDimsV),0); // x direction is le last one
+      ublas::vector<_T> rho(size_x(),0); // x direction is le last one
       for ( auto k=0 ; k<size(0) ; ++k ) {
         for ( auto i=0 ; i<size(NumDimsV) ; ++i ) {
           rho(i) += m_data[k][i]*step.dv;
@@ -244,12 +250,12 @@ class field
     moments () const
     {
       _T vk;
-      std::array<ublas::vector<_T>,3> U = { ublas::vector<_T>(size(NumDimsV),0.) ,
-                                            ublas::vector<_T>(size(NumDimsV),0.) ,
-                                            ublas::vector<_T>(size(NumDimsV),0.) };
+      std::array<ublas::vector<_T>,3> U = { ublas::vector<_T>(size_x(),0.) ,
+                                            ublas::vector<_T>(size_x(),0.) ,
+                                            ublas::vector<_T>(size_x(),0.) };
       for ( size_type k=0 ; k<size(0) ; ++k ) {
         vk = k*step.dv+range.v_min;
-        for ( size_type i=0 ; i<size(1) ; ++i ) {
+        for ( size_type i=0 ; i<size_x() ; ++i ) {
           U[0][i] += m_data[k][i]*step.dv;
           U[1][i] += vk*m_data[k][i]*step.dv;
           U[1][i] += 0.5*vk*vk*m_data[k][i]*step.dv;
@@ -262,12 +268,12 @@ class field
     flux () const
     {
       _T vk;
-      std::array<ublas::vector<_T>,3> U = { ublas::vector<_T>(size(NumDimsV),0.) ,
-                                            ublas::vector<_T>(size(NumDimsV),0.) ,
-                                            ublas::vector<_T>(size(NumDimsV),0.) };
+      std::array<ublas::vector<_T>,3> U = { ublas::vector<_T>(size_x(),0.) ,
+                                            ublas::vector<_T>(size_x(),0.) ,
+                                            ublas::vector<_T>(size_x(),0.) };
       for ( size_type k=0 ; k<size(0) ; ++k ) {
         vk = k*step.dv+range.v_min;
-        for ( size_type i=0 ; i<size(1) ; ++i ) {
+        for ( size_type i=0 ; i<size_x() ; ++i ) {
           U[0][i] += vk*m_data[k][i]*step.dv;
           U[1][i] += vk*vk*m_data[k][i]*step.dv;
           U[1][i] += 0.5*vk*vk*vk*m_data[k][i]*step.dv;
@@ -281,7 +287,7 @@ class field
     {
       std::ofstream f(filename);
       for ( size_type k=0 ; k<size(0) ; ++k ) {
-        for ( size_type i=0 ; i<size(1) ; ++i ) {
+        for ( size_type i=0 ; i<size_x() ; ++i ) {
           f << i*step.dx+range.x_min << " " <<  k*step.dv+range.v_min << " " << m_data[k][i] << "\n";
         }
         f << std::endl;
@@ -295,7 +301,7 @@ std::ostream &
 operator << ( std::ostream & os , field<_T,NumDimsV> const& f )
 {
   for ( typename field<_T,NumDimsV>::size_type k=0 ; k<f.size(0) ; ++k ) {
-    for ( typename field<_T,NumDimsV>::size_type i=0 ; i<f.size(1) ; ++i ) {
+    for ( typename field<_T,NumDimsV>::size_type i=0 ; i<f.size_x() ; ++i ) {
       f << i*f.step.dx+f.range.x_min << " " <<  k*f.step.dv+f.range.v_min << " " << f[k][i] << "\n";
     }
     f << std::endl;
@@ -312,7 +318,7 @@ energy ( field<_T,NumDimsV> const& f , ublas::vector<_T> const& E )
   _T H = 0.;
 
   for ( typename field<_T,NumDimsV>::size_type k=0 ; k<f.size(0) ; ++k ) {
-    for ( typename field<_T,NumDimsV>::size_type i=0 ; i<f.size(1) ; ++i ) {
+    for ( typename field<_T,NumDimsV>::size_type i=0 ; i<f.size_x() ; ++i ) {
       H += SQ(k*f.step.dv+f.range.v_min) * f[k][i] * f.step.dv*f.step.dx;
     }
   }
