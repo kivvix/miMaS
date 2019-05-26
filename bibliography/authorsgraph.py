@@ -1,4 +1,4 @@
-#! /usr/bin/env python3.6
+#! /usr/bin/env python3
 
 """
   écrit dans la sortie standard un fichier GraphViz de connexion des auteurs de la bibliographie
@@ -25,15 +25,27 @@ def bib_dot(bib):
   """
     convertit un fichier (juste son nom) en une représentation GraphViz des connexions entre autheurs
   """
+
+  
   bib_data = pybtex.database.parse_file(bib)
-  authors = [ [ " ".join([name.render_as('text') for name in [ x[0]+"." for x in p.rich_first_names]+p.rich_middle_names+p.rich_prelast_names+p.rich_last_names])  for p in bib_data.entries[e].persons['author'] ] for e in bib_data.entries ]
+  entries = {}
+  for e in bib_data.entries :
+    try:
+      entries[e] = []
+      entries[e].extend(bib_data.entries[e].persons['author'])
+    except:
+      pass
 
-  books = [ [ " ".join([name.render_as('text') for name in [ x[0]+"." for x in p.rich_first_names]+p.rich_middle_names+p.rich_prelast_names+p.rich_last_names])  for p in bib_data.entries[e].persons['author'] ] for e in bib_data.entries if bib_data.entries[e].type=="book" ]
-  thesis = [ [ " ".join([name.render_as('text') for name in [ x[0]+"." for x in p.rich_first_names]+p.rich_middle_names+p.rich_prelast_names+p.rich_last_names])  for p in bib_data.entries[e].persons['author'] ] for e in bib_data.entries if bib_data.entries[e].type=="phdthesis" ]
-  #books = [ [ " ".join([name.render_as('text') for name in [ x[0]+"." for x in p.rich_first_names]+p.rich_middle_names+p.rich_prelast_names+p.rich_last_names])  for p in bib_data.entries[e].persons['author'] ] if bib_data.entries[e].type=="book" for e in bib_data.entries ]
+  authors = [ [ " ".join([name.render_as('text') for name in [ x[0]+"." for x in p.rich_first_names]+p.rich_middle_names+p.rich_prelast_names+p.rich_last_names])  for p in entries[e] ] for e in bib_data.entries ]
 
+  books = [ [ " ".join([name.render_as('text') for name in [ x[0]+"." for x in p.rich_first_names]+p.rich_middle_names+p.rich_prelast_names+p.rich_last_names])  for p in entries[e] ] for e in bib_data.entries if bib_data.entries[e].type=="book" ]
+  thesis = [ [ " ".join([name.render_as('text') for name in [ x[0]+"." for x in p.rich_first_names]+p.rich_middle_names+p.rich_prelast_names+p.rich_last_names])  for p in entries[e] ] for e in bib_data.entries if bib_data.entries[e].type=="phdthesis" ]
 
-  r = "strict graph {\n"
+  #r = "strict graph {\n"
+  r = """strict graph {
+    splines=true
+    overlap=false
+    K=1"""
   if len(books) > 0:
     r += "\n{\n  "
     r += "  ".join([ "\""+author+"\" [shape=box]\n" for author in sum(books,[]) ])
@@ -53,7 +65,8 @@ if __name__ == '__main__':
     dot = bib_dot(sys.argv[1])
   else:
     print("""USAGE :
-      %s bibliograph.bib [-o output.dot] """%sys.argv[0])
+      %s bibliograph.bib [-o output.dot]\n\nEXAMPLE :
+      ./authorsgraph.py biblio.bib | fdp -T png -o biblio.png"""%sys.argv[0])
     quit()
 
   if "-o" in sys.argv:
