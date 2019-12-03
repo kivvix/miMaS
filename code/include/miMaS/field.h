@@ -237,13 +237,27 @@ class field
     auto
     density () const
     {
-      ublas::vector<_T> rho(size_x(),0); // x direction is le last one
+      ublas::vector<_T> rho(size_x(),0.); // x direction is le last one
       for ( auto k=0 ; k<size(0) ; ++k ) {
         for ( auto i=0 ; i<size(NumDimsV) ; ++i ) {
           rho(i) += m_data[k][i]*step.dv;
         }
       }
       return rho;
+    }
+
+    auto
+    courant () const
+    {
+      _T vk;
+      ublas::vector<_T> J(size_x(),0.); // x direction is le last one
+      for ( auto k=0 ; k<size(0) ; ++k ) {
+        vk = k*step.dv+range.v_min;
+        for ( auto i=0 ; i<size(NumDimsV) ; ++i ) {
+          J(i) += vk*m_data[k][i]*step.dv;
+        }
+      }
+      return J;
     }
 
     auto

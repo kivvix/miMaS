@@ -80,6 +80,7 @@ struct array_view
 
   public:
   // constructors --------------------------------------------------------------
+    // don't allocate memory here! this class is just a wrapper not a memory manager
     // default constructor (useless in main cases)
     array_view ()
       : m_data(nullptr) , m_size(0)

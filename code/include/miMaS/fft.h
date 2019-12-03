@@ -34,6 +34,7 @@ enum complex_part { re=0, im=1 };
   brief: Constructeur de la classe `spectrum` permettant de créer un
   spectre de taille `n` (`n` est aussi la taille des données en entrée)
 **/
+
 struct spectrum
   : public tools::array_view<fftw_complex>
 {
@@ -91,6 +92,26 @@ struct spectrum_
       { *it /= this->size(); }
   }
 };
+
+template < typename InputIt , typename OutputIt >
+void
+fft ( InputIt first , InputIt last , OutputIt d_it )
+{
+  std::size_t size = std::distance(first,last);
+  fftw_plan p = fftw_plan_dft_r2c_1d( size , first , (fftw_complex*)(d_it) , FFTW_ESTIMATE);
+  fftw_execute(p); fftw_destroy_plan(p);
+}
+
+template < typename InputIt , typename OutputIt >
+void
+ifft ( InputIt first , InputIt last , OutputIt d_it )
+{
+  std::size_t size = std::distance(first,last);
+  fftw_plan pI = fftw_plan_dft_c2r_1d( size , (fftw_complex*)(first) , d_it , FFTW_ESTIMATE);
+  fftw_execute(pI); fftw_destroy_plan(pI);
+  for ( std::size_t i=0 ; i<size ; ++i,++d_it )
+    { *d_it /= size; }
+}
 
 } // namespace fft
 

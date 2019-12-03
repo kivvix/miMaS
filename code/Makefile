@@ -9,8 +9,8 @@ SRC_dir    = source
 HEADER_dir = include/$(PROJET)
 OBJ_dir    = obj
 
-INC_BOOST = /usr/local/Cellar/boost/1.68.0_1/include
-INC_FFTW  = /usr/local/Cellar/fftw/3.3.8/include
+INC_BOOST = /usr/local/Cellar/boost/1.71.0/include
+INC_FFTW  = /usr/local/Cellar/fftw/3.3.8_1/include
 LIB_FFTW  = fftw3
 
 INCLUDES = $(INC_BOOST) $(INC_FFTW) $(HEADER_dir)/..
