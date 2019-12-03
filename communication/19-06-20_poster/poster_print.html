@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Poster</title>
+  <meta charset="utf-8" />
+  <link href='css/raleway.css' rel='stylesheet' type='text/css' />
+  <style type="text/css">
+* { box-sizing:border-box; }
+
+html {
+  --display_postit: block;
+  --background_paragph: rgba(255,255,255,0.83);
+  padding: 0; margin: 0;
+}
+body {
+  font-size: 1cm;
+  font-family: "Helvetica";
+  counter-reset: section;
+  font-family: "Raleway", "HelveticaNeue", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  line-height: 1.6;
+  font-weight: 400;
+}
+.display { padding: 1em; }
+.print { padding: 0; margin: 0; }
+a { text-decoration: none; color: inherit; }
+
+#options {
+  display: block;
+  border: 1mm #434241 solid;
+  background: #fff;
+  padding: 0.25cm 0;
+  border-radius: 0 2mm 2mm 0;
+  position: fixed;
+  left: -1mm; top: 3cm;
+  z-index: 99;
+  transform: translateX(-75%);
+  transition-duration: 0.5s;
+  font-size: 16px;
+}
+#options h1 { font-size: 1.5em; letter-spacing: -2px !important; text-align: right; background-color: #aaa; padding: 5px;margin: 15px 0 !important;}
+#options:hover { transform: translateX(0); }
+#options input[type=checkbox] { /*transform: scale(2);*/ display: none }
+#options label { display: block; padding: 0 15px; }
+#options input[type=checkbox] + label:before {
+  display: inline-block; box-sizing:border-box;
+  border: 1px #434241 solid; border-radius: 3px;
+  width: 25px; height: 25px;
+  margin-right: 15px; margin-left: 5px;
+  font-size: 45px; line-height: 15px;
+  content: "\a0";
+}
+#options input[type=checkbox]:checked + label:before { /*content: "\2713";*/ content: "\2717"; color: crimson; }
+.print #options { display: none; }
+
+#poster {
+  display: block;
+  position: relative;
+  width: 841mm; height: 1189mm;
+  padding: 2cm; padding-bottom: 0;
+  /*overflow: hidden;*/
+  color: #434241;
+
+  --background: url("img/background2.png");
+  background-image: var(--background);
+  background-size: cover;
+  /*background-position: -4cm 0;*/
+  /*background-position: -42cm;*/
+
+  page-break-inside: avoid;
+  --webkit-region-break-inside: avoid;
+}
+
+.display #poster {
+  transform: scale(var(--scaling)); transform-origin: top left;
+  border: 2px solid #424242;
+  box-shadow: 8mm 8mm 12mm #aaa;
+  margin: 2cm auto;
+}
+.print #poster {
+  /*transform: scale(1);*/
+}
+.print .postit { display: none !important; }
+/*
+#poster:before {
+  content: "";
+  position: absolute;
+  width: 150%; height: 150%;
+  top:-25%; left:-25%;
+  z-index: -1;
+  background-image: url("img/background.jpg");
+  background-size: cover;
+  background-position: -2cm 0;
+  transform: rotate(90deg);
+}
+*/
+@font-face {
+  font-family: 'Indie Flower';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Indie Flower'), local('IndieFlower'), url(https://fonts.gstatic.com/s/indieflower/v10/m8JVjfNVeKWVnh3QMuKkFcZVaUuH99GUDg.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+.postit {
+  font-size: 0.5cm;
+  display: var(--display_postit);
+  position: absolute;
+  color: #434241;
+  box-shadow: 0 10mm 10mm 2mm rgba(0,0,0,0.3);
+  background: #FFFC7F;
+  transform: rotate(-2deg);
+  padding: 0.25cm; padding-top: 1cm;
+  font-family: 'Indie Flower', cursive;
+  width: 8cm; height: 8cm;
+  transition-duration: 2s;
+  margin-bottom: 2cm;
+  z-index: 2;
+}
+.postit.pink { background: #fe31ba; }
+.postit li { list-style: "- "; }
+.postit:hover { transform: rotate(-8deg) translate(-5cm,-2cm); }
+.postit:active { transform: rotate(0deg) translate(0,0); }
+.box { border: 1px solid #434241; padding: 2mm; border-radius: 2mm; }
+
+header { --color: #434241; color: var(--color); }
+#main { display: block; position: relative; width: 100%; columns: 2; column-gap: 1cm; page-break-after: avoid; }
+
+.last-name {
+  font-variant: small-caps;
+}
+.author { text-decoration: underline; }
+.contributors {
+  display: block;
+  text-align: center;
+  margin-bottom: 0.75cm;
+  text-shadow: 0.5mm  0.5mm 0.2mm rgba(255,255,255,1), -0.5mm -0.5mm 0.2mm rgba(255,255,255,1),
+               0.5mm -0.5mm 0.2mm rgba(255,255,255,1), -0.5mm  0.5mm 0.2mm rgba(255,255,255,1);
+}
+.contributors li { display: inline-block; }
+.contributors li:before { content: "&"; display: inline-block; padding: 1em; }
+.contributors li:first-child:before { content: ""; }
+
+.places {
+  display: block;
+  counter-reset: place;
+  font-size: 0.75em;
+  text-shadow: 0.5mm  0.5mm 0.2mm rgba(255,255,255,1), -0.5mm -0.5mm 0.2mm rgba(255,255,255,1),
+               0.5mm -0.5mm 0.2mm rgba(255,255,255,1), -0.5mm  0.5mm 0.2mm rgba(255,255,255,1);
+}
+.places li { display: inline-block; }
+.places li:before { content: counter(place)": "; counter-increment: place; }
+.places li:after  { content: ", "; }
+.places li:last-child:after { content: ""; }
+
+h1 {
+  font-size: 2.5em;
+  text-align: center;
+  line-height: 1.2;
+  letter-spacing: -.1rem;
+  font-weight: 400;
+  text-shadow: 0 0 2mm rgba(255,255,255,1), 0 0 5mm rgba(255,255,255,1);
+
+  text-shadow: 0.5mm  0.5mm 2mm rgba(255,255,255,1), -0.5mm -0.5mm 2mm rgba(255,255,255,1),
+               0.5mm -0.5mm 2mm rgba(255,255,255,1), -0.5mm  0.5mm 2mm rgba(255,255,255,1);
+}
+
+section {
+  display: inline-block;
+  width: calc(100%);
+  /*height: 30%;*/
+  margin: 0; margin-bottom: 1.5cm;
+}
+h2 {
+  padding: 0.5cm;
+  background-color: #ff8821/*#de8d0e*/;
+  background-color: rgba(255, 136, 33,0.83);
+  /*background: radial-gradient(circle at left,#ff8a00 70%,rgba(218, 27, 96,0));*/
+  border-radius: -1mm;
+  color: #fff;
+  font-size: 1.4em;
+  line-height: 1.25; letter-spacing: -.05rem;
+  font-weight: 400;
+  margin-top: 0; margin-bottom: 0.5cm;
+}
+h2:before {
+  counter-increment: section;
+  content: counter(section) " \25B8 ";
+  margin-right: 0.5cm; margin-left: 0.5cm; .5cm;
+  font-weight: 600;
+}
+.paragraph { background: var(--background_paragph); padding: 1cm; border-radius: 1mm; border: 1px #aaa solid; }
+.paragraph p { margin-bottom: 0; }
+p, li, ul { text-align: justify; margin-top: 0;}
+.ref h2:before { color: transparent; }
+.ref { position: absolute; bottom: 0; max-width: calc(100% - 4cm); }
+.ref h2 {padding: 0.25cm;}
+.ref .paragraph { padding: 0.5cm; }
+.biblio { counter-reset: ref; font-size: 0.75em; margin: 0;}
+ul.biblio { columns: 2; column-rule: solid 1mm #434241; }
+.biblio ul { display: inline; }
+.biblio>li { list-style: none; display: inline-block; }
+.biblio>li:before { counter-increment: ref; content: "[" counter(ref) "]"; }
+.title:after { content: "," ; }
+.journal { font-style: italic; }
+.authors { display: inline; padding: 0 !important; margin: 0;}
+.authors li { display: inline; }
+.authors li:before { content: " and "; }
+.authors li:first-child:before { content: ""; }
+.date:before { content: " ("; } .date:after { content: ")"; }
+
+table { margin-left: auto; margin-right: auto; border-spacing: 0; }
+th,td { padding: 0.5em; }
+tr { text-align: center; }
+tr:nth-child(even) {background: transparent; }
+tr th { border-bottom: 1mm #434241 solid; }
+tr td { border-bottom: 0.75mm #aaa solid; }
+tr:last-child td { border-bottom: none; }
+
+figure { display: block; margin-left: auto; margin-right: auto; text-align: center; }
+figcaption { font-size: 0.75em; }
+figure img { max-width: 100%; max-height: 100%; }
+  </style>
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.2/dist/katex.min.css" integrity="sha384-yFRtMMDnQtDRO8rLpMIKrtPCD5jdktao2TV19YiZYWMDkUR5GQZR/NOVTdquEx1j" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.10.2/dist/katex.min.js" integrity="sha384-9Nhn55MVVN0/4OFx7EE5kpFBPsEMZxKTCnA+4fqDmg12eCTqGi6+BB2LjY8brQxJ" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.10.2/dist/contrib/auto-render.min.js" integrity="sha384-kWPLUVMOks5AQFrykwIup5lo0m3iMkkHrD0uJ4H5cjeGihAutqP0yW0J6dpFiVkI" crossorigin="anonymous"></script>
+  <script>
+      document.addEventListener("DOMContentLoaded", function() {
+          renderMathInElement(document.body, {
+            delimiters: [
+                  {left: "$$", right: "$$", display: true},
+                  {left: "\\[", right: "\\]", display: true},
+                  {left: "$", right: "$", display: false},
+                  {left: "\\(", right: "\\)", display: false}
+              ]
+          });
+      });
+  </script>
+
+</head>
+<body class="print" id="poster" >
+
+    <header>
+      <h1>Exponential Runge-Kutta methods for Vlasov-Poisson equation</h1>
+      <ul class="contributors" >
+        <li><a href="mailto:josselin.massot@univ-rennes1.fr" class="author" >Josselin <span class="last-name" >Massot</span></a><sup>1,2</sup></li>
+        <li><a href="mailto:nicolas.crouseilles@inria.fr" >Nicolas <span class="last-name">Crouseilles</span></a><sup>2,1</sup></li>
+        <li><a href="mailto:anais.crestetto@univ-nantes.fr" >Anaïs <span class="last-name">Crestetto</span></a><sup>3</sup></li>
+      </ul>
+      <aside class="places" >
+        <ul>
+          <li>IRMAR – Université de Rennes</li>
+          <li>Inria Rennes – Bretagne Atlantique</li>
+          <li>LMJL – Université de Nantes</li>
+        </ul>
+      </aside>
+    </header>
+
+
+
+
+
+    <div id="main" >
+      <section>
+
+        <h2>Vlasov-Poisson equation</h2>
+
+        <div class="paragraph" >
+          <p><em>Vlasov</em> equation plays an important role in the modeling of plasma physics, it is a non-linear transport in $(x,v)$ of a density distribution $f = f(t,x,v)$; coupled with <em>Poisson</em> equation for estimate electric field $E=E(t,x)$:</p>
+          <div style="display: flex; align-items: center;">
+            <p style="width: 33%;" >$$
+              \begin{aligned}
+                & \begin{cases}
+                  \partial_tf + v\partial_xf + E\partial_vf = 0 \\
+                  \partial_xE = \int_{\mathbb{R}}f\,\mathrm{d}v - 1
+                \end{cases}\\
+                & \quad x\in\mathbb{\Omega}\subset\mathbb{R},\ v\in\mathbb{R}
+              \end{aligned}
+            $$</p>
+            <figure style="width: 66%; margin-bottom: 0;" >
+              <img src="img/fvp_bot.png" />
+              <figcaption>Example of filamentation process in a solution</figcaption>
+            </figure>
+          </div>
+          <div class="postit" >Zoomer sur la filamentation</div>
+          <p>High order methods are needed in phase space $(x,v)$ to study filamentation.</p>
+        </div>
+
+       </section>
+
+    <section>
+
+      <h2>Simplified model</h2>
+
+      <div class="paragraph" >
+        <p>We study the stability problem on a simplify model:
+          <span style="display: block; margin-top: -1em; margin-bottom: -0.5em;">
+            $$
+              \partial_tu + a\partial_xu = 0.
+            $$
+          </span>
+        We discretize in space with <b>WENO</b> method [1], and we test various Runge-Kutta methods for the time integrator.
+        We apply <b>von Neumann analysis</b> on space discretization to study amplification factor as a curve in complex plane $\mathbb{C}$.</p>
+      <div style="display: flex;" >
+        <ul style="width: 66%;" >
+          <li>Von Neumann analysis usually used on linear method: first studies on stability of WENO method [2], and CFL estimate [3] have been done on <em>linearized WENO</em>.</li>
+          <li>We can try to apply von Neumann analysis to the full non-linearized WENO method. WENO method is weakly non-linear then we can compute amplification factor.</li>
+        </ul><!--<br />
+          We apply <b>von Neumann analysis</b> on space discretization to study amplification factor in function of the phase $\phi$. Because of theory of von Neumann analysis works only with a linear method first studies on stability of WENO method have been done on linearized WENO [2]. It is a simpler way to study stability with finite Taylor series, and make a first estimation of CFL number [3].<br />
+          We can try to apply von Neumann analysis to the full non-linearized WENO method. WENO method is sufficiently non-linear to obtain an amplification factor.-->
+        <figure style="width: 33%; height: 10cm; margin-top: 0; margin-bottom: 0;" >
+          <img src="img/weno.png" />
+          <figcaption>Amplification factor of WENO method (linearized or not)</figcaption>
+        </figure>
+      </div>
+
+        <p style="margin-top: 0;" >We define stability domain of an explicit Runge-Kutta method RK($s$,$n$) as:
+          <span style="display: block; margin-top: -1em; margin-bottom: -0.5em;">
+            $$
+              \mathcal{D}_{(s,n)} = \left\{ z\in\mathbb{C} : |p_{(s,n)}(z)|\leq 1 \right\}
+            $$
+          </span>
+          with $s$ the number of stages, $n$ the order and $p_{(s,n)}$ the stability function of <span style="white-space:nowrap;">RK($s$,$n$)</span>.</p>
+      </div>
+    </section>
+
+    <section>
+
+      <h2>Automatic CFL estimate</h2>
+
+      <div class="paragraph" >
+        <p>It is possible to interpret CFL number between time integrator and space method as the biggest homothety ratio that wedges all the amplification factor curve into the stability domain of considered Runge-Kutta methods. We estimate <b>numerically</b> the CFL $\sigma$ (respectively $\sigma^\ell$) for various couples RK($s$,$n$) with WENO (respectively linearized WENO). <em>All CFL have been approved with a long time simulation</em>.</p>
+        
+        <div style="display: flex;" >
+          <figure style="width: 33%; height: 15cm;" >
+            <img src="img/cfl_scheme.png" />
+            <figcaption>Geometric CFL interpretation</figcaption>
+          </figure>
+          <span style="width: 66%;" >
+            <span style="display: block; margin-top: -0.5em; margin-bottom: -0.5em;">
+              $$
+                \Delta t \leq \frac{\sigma}{a}\Delta x
+              $$
+            </span>
+            <table>
+              <tr><th>Time integrator</th><th> $\sigma^{\ell}$ </th><th> $\sigma$ </th></tr>
+              <tr><td> RK(3,3)       </td> <td> 1.43 </td> <td> 1.60 </td></tr>
+              <tr><td> RK(4,4)       </td> <td> 1.73 </td> <td> 1.68 </td></tr>
+              <tr><td> RK(6,5) (DP5) </td> <td> 1.78 </td> <td> 2.06 </td></tr>
+              <tr><td> RK(8,6)       </td> <td> 2.53 </td> <td> 2.56 </td></tr>
+            </table>
+          </span>
+        </div>
+      </div>
+
+    </section>
+
+    <section>
+
+      <h2>Exponential integrator on Vlasov-Poisson equation</h2>
+
+      <div class="paragraph" >
+        <p>We apply a Fourier transform in $x$ direction:
+          <span style="display: flex; align-items: baseline;" >
+            <span style="display: inline-block; width: 100%; text-align: center;" >$$\partial_t\hat{f} + i\kappa v\hat{f} + \widehat{(E\partial_vf)} = 0$$</span>
+            <span style="display: inline-block; width: 100%; text-align: center;" >of the form</span>
+            <span style="display: inline-block; width: 100%; text-align: center;" >$$\partial_t u + Lu + N(u) = 0.$$</span>
+          </span>
+        Next we use an exponential integrator (Duhamel formula):
+          <span style="display: flex; align-items: baseline;" >
+            <span style="display: inline-block; width: 100%; text-align: center;" >$$\partial_t(e^{i\kappa vt}\hat{f}) + e^{i\kappa vt}\widehat{(E\partial_vf)} = 0$$</span>
+            <span style="display: inline-block; width: 100%; text-align: center;" >of the form</span>
+            <span style="display: inline-block; width: 100%; text-align: center;" >$$\partial_t(e^{Lt}u) + e^{Lt}N(u) = 0.$$</span>
+          </span>
+        With this exponential form we can use a classical Runge-Kutta method, in this context we call them Lawson methods or Integrating factor Runge-Kutta methods [4].</p>
+        <p>Stability function of Lawson schemes can be expressed in terms of the underlying Runge-Kutta method:
+          <span style="display: block; margin-top: -1em; margin-bottom: -0.5em;" >
+            $$
+              p_{\text{Lawson}(s,n)}(z) = p_{(s,n)}(z)e^{L\Delta t}
+            $$
+          </span>
+      with $L=i\kappa v\in i\mathbb{R}$ so stability domain is the same. Our numerical CFL study, on simplified model, still works on Duhamel formulation of Vlasov-Poisson.</p>
+    
+    </section>
+
+    <section>
+
+      <h2>The chosen one</h2>
+
+      <div class="paragraph" >
+        <p>We are interested in the numerical cost $\frac{\Delta t}{s}$ of RK($s$,$n$). To compare each time integrator, we compute total energy in Vlasov-Poisson system:
+          <span style="display: block; margin-top: -1em; margin-bottom: -0.5em;" >
+            $$
+              H(t) = \int_{\Omega}\int_{\mathbb{R}}v^2f\,\mathrm{d}v\mathrm{d}x + \int_{\Omega}E^2\,\mathrm{d}x
+            $$
+          </span>
+        which is preserved in time. We propose to select the best method by considering:</p>
+        <span style="display: flex; margin-top: -1em; align-items: center;" >
+          <span style="display: block;" >
+            $$
+              h_{(s,n)}:\frac{\Delta t}{s} \mapsto \left\| \frac{H(t)-H(0)}{H(0)} \right\|_{\infty}\!\!
+            $$
+            Tested strategy:
+            <ul style="margin-top: 0; font-size: 0.75em;">
+              <li>Spectral scheme in $x$,</li>
+              <li>WENO method in $v$,</li>
+              <li>Lawson method of the underlying RK($s$,$n$) in time.</li>
+            </ul>
+          </span>
+          <figure style="" >
+            <img src="img/oHdt.png" />
+            <figcaption>$h_{(s,n)}$ as a function of numerical cost $\frac{\Delta t}{s}$ in log scale</figcaption>
+          </figure>
+        </span>
+        <!--<p>Saturation of RK(8,6) and RK(7,6) is error of WENO method $\mathcal{O}(\Delta v^6)$</p>-->
+      </div>
+
+    </section>
+
+    <section style=";" >
+
+      <h2>Conclusion</h2>
+
+      <div class="paragraph" >
+        <ul>
+          <li>Promising approach for Vlasov-Poisson simulation, <em>less stages than splitting strategy</em>.</li>
+          <li>Selected Runge-Kutta method is Dormand-Prince RK(6,5), this is an embedded Runge-Kutta method (adaptative stepsize, relaxation of the CFL).</li>
+          <li>Extension to multi-dimensional Vlasov-Poisson is easier than splitting strategy.</li>
+        </ul>
+
+        <p>Test on <em>bump on tail</em> test case : <span style="font-size: 0.75em" >$$f(t=0,x,v) = \left(\frac{0.9}{\sqrt{2\cdot\pi}}e^{-\frac{|v|^2}{2}} + \frac{0.2}{\sqrt{2\cdot\pi}}e^{-2|v-4.5|^2}\right)\left(1+0.04\cdot\cos(0.3\cdot x)\right)$$</span></p>
+
+        <figure style="margin-bottom: 0;">
+          <span style="display: flex; justify-content: space-evenly; height: 7.5cm;" >
+            <img src="img/init.png" />
+            <img src="img/vp.png" />
+          </span>
+          <figcaption style="font-size: 0.75em;">Bump on tail simulation ($t=0$ on the left, $t=20$ on the right)</figcaption>
+        </figure>
+      <!--
+        <p>Our scheme :
+          <ul>
+            <li>Spectral scheme in $x$</li>
+            <li>WENO method in $v$</li>
+            <li>Lawson method induced by DP5 wich is embeded Runge-Kutta method (adaptative stepsize)</li>
+          </ul>
+        </p>
+        <p>Optimal high order futur micro-part of a hybrid fluid/kinetic model.</p>
+      -->
+      </div>
+    </section>
+
+  </div>
+    <section class="ref" style="margin-top: -1cm;" >
+
+      <h2>References</h2>
+      
+      <div class="paragraph" >
+        <ul class="biblio" >
+          <li>
+            <span class="title" >Efficient Implementation of Weighted ENO Schemes</span>
+            <ul class="authors" >
+              <li>G.-S. <span class="last-name" >Jiang</span></li>
+              <li>C-W. <span class="last-name" >Shu</span></li>
+            </ul>
+            <span class="journal">Journal of Computational Physics</span>
+            <span class="date" >1996</span>
+          </li>
+          <li>
+            <span class="title">Linear instability of the fifth-order WENO method</span>
+            <ul class="authors" >
+              <li>R. <span class="last-name" >Wang</span></li>
+              <li>R. J. <span class="last-name" >Spiteri</span></li>
+            </ul>
+            <span class="journal" >Journal on Numerical Analysis</span>
+            <span class="date" >2007</span>
+          </li>
+          <li>
+            <span class="title">On the Linear Stability of the Fifth-Order WENO Discretization</span>
+            <ul class="authors" >
+              <li>M. <span class="last-name" >Motamed</span></li>
+              <li>C. B. <span class="last-name" >Macdonald</span></li>
+              <li>S. J. <span class="last-name" >Ruuth</span></li>
+            </ul>
+            <span class="journal">Journal of Scientific Computing</span>
+            <span class="date">2010</span>
+          </li>
+          <li>
+            <span class="title" >Strong Stability Preserving Integrating Factor Runge-Kutta Methods</span>
+            <ul class="authors" >
+              <li>L. <span class="last-name" >Isherwood</span></li>
+              <li>Z. J. <span class="last-name" >Grant</span></li>
+              <li>S. <span class="last-name" >Gottlieb</span> (2018)</li>
+            </ul>
+            <span class="journal"></span>
+            <span class="date">2018</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+</body>
+</html>
