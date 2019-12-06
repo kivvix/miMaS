@@ -6,6 +6,7 @@ import pybtex
 import base64
 import re
 import string
+import base64
 
 data = database.parse_file("biblio.bib")
 entries = sorted(data.entries , key=lambda e:data.entries[e].fields['year'])
@@ -14,7 +15,9 @@ def entry_to_string (data,e):
   d = {}
   d['citekey'] = e
   tmp = e.split(':')
-  d['url'] = "pdf/"+tmp[1]+"-"+tmp[0]+".pdf"
+  d['url'] = ""
+  if 'Bdsk-File-1' in data.entries[e].fields:
+    d['url'] = "("+re.search('relativePathYaliasData_(.+?).pdfO', str(base64.urlsafe_b64decode(data.entries[e].fields['Bdsk-File-1']),'latin')).group(1)+".pdf)"
   d['title'] = pybtex.richtext.Text.from_latex(data.entries[e].fields['title']).render_as('text')
   d['authors'] = ""
   if 'author' in data.entries[e].persons:
@@ -32,7 +35,7 @@ def entry_to_string (data,e):
     print(filter(lambda x: x in printable, str(s)))
   except:
     pass
-  return """- [{citekey}]({url}) **{title}** (*{year}*)\n\t{authors}\n\t{journal}""".format(**d)
+  return """- [{citekey}]{url} **{title}** (*{year}*)\n\t{authors}\n\t{journal}""".format(**d)
 
 #print("\n".join([ entry_to_string(data,e) for e in entries ]))
 
