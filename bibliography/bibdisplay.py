@@ -13,6 +13,8 @@ entries = sorted(data.entries , key=lambda e:data.entries[e].fields['year'])
 def entry_to_string (data,e):
   d = {}
   d['citekey'] = e
+  tmp = e.split(':')
+  d['url'] = "pdf/"+tmp[1]+"-"+tmp[0]
   d['title'] = pybtex.richtext.Text.from_latex(data.entries[e].fields['title']).render_as('text')
   d['authors'] = ""
   if 'author' in data.entries[e].persons:
@@ -30,7 +32,7 @@ def entry_to_string (data,e):
     print(filter(lambda x: x in printable, str(s)))
   except:
     pass
-  return """- [{citekey}] **{title}** (*{year}*)\n\t{authors}\n\t{journal}""".format(**d)
+  return """- [{citekey}]({url}) **{title}** (*{year}*)\n\t{authors}\n\t{journal}""".format(**d)
 
 #print("\n".join([ entry_to_string(data,e) for e in entries ]))
 
