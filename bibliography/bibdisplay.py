@@ -14,7 +14,7 @@ def entry_to_string (data,e):
   d = {}
   d['citekey'] = e
   tmp = e.split(':')
-  d['url'] = "pdf/"+tmp[1]+"-"+tmp[0]
+  d['url'] = "pdf/"+tmp[1]+"-"+tmp[0]+".pdf"
   d['title'] = pybtex.richtext.Text.from_latex(data.entries[e].fields['title']).render_as('text')
   d['authors'] = ""
   if 'author' in data.entries[e].persons:
