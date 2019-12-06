@@ -39,7 +39,7 @@ def entry_to_string (data,e):
     print(filter(lambda x: x in printable, str(s)))
   except:
     pass
-  return """- [{citekey}]{url} **{title}** (*{year}*)\n\t{authors}\n\t{journal}""".format(**d)
+  return """- [[{citekey}]{url}] **{title}** (*{year}*)\n\t{authors}\n\t{journal}""".format(**d)
 
 #print("\n".join([ entry_to_string(data,e) for e in entries ]))
 
