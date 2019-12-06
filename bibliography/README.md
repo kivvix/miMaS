@@ -159,7 +159,7 @@
 - [Boyer:2014](pdf/2014-Boyer.pdf) **Aspects théoriques et numériques de l'équation de transport** (*2014*)
 	F. Boyer
 	 
-- [Ketcheson:2015] **NodePy (Numerical ODEs in Python) softwate version 0.6** (*2015*)
+- [Ketcheson:2015](https://nodepy.readthedocs.io/en/latest/) **NodePy (Numerical ODEs in Python) softwate version 0.6** (*2015*)
 	D. Ketcheson
 	 
 - [Sonnendrucker:2015](pdf/2015-Sonnendrucker.pdf) **Numerical Methods for the Vlasov-Maxwell equations** (*2015*)
@@ -168,7 +168,7 @@
 - [Li:2016](pdf/2016-Li.pdf) **High order finite volume WENO schemes for Euler equations under gravitational fields** (*2016*)
 	G. Li, Y. Xing
 	*Journal of Computational Physics*
-- [Meurer:2017] **SymPy: symbolic computing in Python** (*2017*)
+- [Meurer:2017](https://doi.org/10.7717/peerj-cs.103) **SymPy: symbolic computing in Python** (*2017*)
 	A. Meurer, C. P. Smith, M. Paprocki, O. Čertík, S. B. Kirpichev, M. Rocklin, A. Kumar, S. Ivanov, J. K. Moore, S. Singh, T. Rathnayake, S. Vig, B. E. Granger, R. P. Muller, F. Bonazzi, H. Gupta, S. Vats, F. Johansson, F. Pedregosa, M. J. Curry, A. R. Terrel, Š. Roučka, A. Saboo, I. Fernando, S. Kulal, R. Cimrman, A. Scopatz
 	*PeerJ Computer Science*
 - [Lunet:2017](pdf/2017-Lunet.pdf) **Combination of WENO and Explicit Runge–Kutta Methods for Wind Transport in the Meso-NH Model** (*2017*)

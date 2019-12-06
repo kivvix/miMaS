@@ -20,6 +20,8 @@ def entry_to_string (data,e):
     m = re.search('relativePathYaliasData_(.+?).pdfO', str(base64.urlsafe_b64decode(data.entries[e].fields['Bdsk-File-1']),'iso-8859-1')).group(1)
     printable = set(string.printable)
     d['url'] = "(" +''.join(filter(lambda x: x in printable, m))+ ".pdf)"
+  else:
+    d['url'] = "(" + data.entries[e].fields['Bdsk-Url-1'] + ")"
   d['title'] = pybtex.richtext.Text.from_latex(data.entries[e].fields['title']).render_as('text')
   d['authors'] = ""
   if 'author' in data.entries[e].persons:
