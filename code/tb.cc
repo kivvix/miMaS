@@ -144,6 +144,7 @@ int main(int,char**)
   auto db_M1 = maxwellian(0.5,-ui,1.) , db_M2 = maxwellian(0.5,ui,1.);
   auto bot_M1 = maxwellian(1.-alpha,0.,1.) , bot_M2 = maxwellian(alpha,ui,0.25);
   auto tb_MC = maxwellian(1.-alpha,0.,Tc) , tb_M1 = maxwellian(0.5*alpha,ui,1.) , tb_M2 = maxwellian(0.5*alpha,-ui,1.);
+  auto v10_MC = maxwellian(1.-alpha,0,Tc) , v10_Mh = maxwellian(alpha,0.,1.);
 
   for (field<double,2>::size_type k=0 ; k<f.size(0) ; ++k ) {
     for (field<double,2>::size_type i=0 ; i<f.size(1) ; ++i ) {
@@ -157,6 +158,8 @@ int main(int,char**)
       //f[k][i] = (bot_M1(Xi(i),Vk(k)) + bot_M2(Xi(i),Vk(k)))*(1.+0.01*std::cos(Kx*Xi(i)));
       //// tb Kx=0.5 , ui=4. , alpha=0.2 , Tc=0.01
       f[k][i] = tb_MC(Xi(i),Vk(k)) + (tb_M1(Xi(i),Vk(k)) + tb_M2(Xi(i),Vk(k)) )*(1. + 0.01*std::cos(Kx*Xi(i)));
+      //// v10 Kx=0.5 , alpha=0.2
+      //f[k][i] = v10_MC(Xi(i),Vk(k)) + ( std::pow(Vk(k),10)*v10_Mh(Xi(i),Vk(k))/945. )*(1. + 0.01*std::cos(Kx*Xi(i)));
     }
   }
   f.write("vphl/kin/init_tb.dat");
