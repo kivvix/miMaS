@@ -21,7 +21,7 @@ def entry_to_string (data,e):
   #d['authors'] = ", ".join([ " ".join([p.rich_first_names[0].render_as('text'),p.rich_last_names[0].render_as('text')]) for p in data.entries[e].persons['author'] ])
   d['journal'] = " "
   if 'journal' in data.entries[e].fields:
-    d['journal'] = data.entries[e].fields['journal']
+    d['journal'] = "*"+data.entries[e].fields['journal']+"*"
   d['year'] = data.entries[e].fields['year']
   try:
     printable = set(string.printable)
@@ -30,9 +30,11 @@ def entry_to_string (data,e):
     print(filter(lambda x: x in printable, str(s)))
   except:
     pass
-  return """[{citekey}] {title} ({year})\n\t{authors}\n\t{journal}""".format(**d)
+  return """- [{citekey}] **{title}** (*{year}*)\n\t{authors}\n\t{journal}""".format(**d)
 
 #print("\n".join([ entry_to_string(data,e) for e in entries ]))
 
+print("""# Bibliography
 
-[ entry_to_string(data,e) for e in entries ]
+{}
+""".format("\n".join([ entry_to_string(data,e) for e in entries ])))
