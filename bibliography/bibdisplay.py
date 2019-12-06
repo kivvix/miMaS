@@ -17,7 +17,8 @@ def entry_to_string (data,e):
   tmp = e.split(':')
   d['url'] = ""
   if 'Bdsk-File-1' in data.entries[e].fields:
-    d['url'] = "("+re.search('relativePathYaliasData_(.+?).pdfO', str(base64.urlsafe_b64decode(data.entries[e].fields['Bdsk-File-1']),'latin')).group(1)+".pdf)"
+    m = re.search('relativePathYaliasData_(.+?).pdfO', str(base64.urlsafe_b64decode(data.entries[e].fields['Bdsk-File-1']),'iso-8859-1')).group(1)
+    d['url'] = "(" + bytes(m,'latin').decode('utf-8','ignore') + ")"
   d['title'] = pybtex.richtext.Text.from_latex(data.entries[e].fields['title']).render_as('text')
   d['authors'] = ""
   if 'author' in data.entries[e].persons:
