@@ -58,7 +58,7 @@ int main(int,char**)
   fh.step.dx = (fh.range.x_max-fh.range.x_min)/Nx;
 
   double dt = 0.05;//1.*fh.step.dv;
-  double Tf = 20.;
+  double Tf = 200.;
   
   // velocity and frequency
   ublas::vector<double> v (Nv,0.); for ( std::size_t k=0 ; k<Nv ; ++k ) { v[k] = Vk(k); }

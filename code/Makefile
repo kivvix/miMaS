@@ -74,7 +74,7 @@ mrproper : clean
 	rm -f $(LIB_dir)/lib$(PROJET).so
 
 nuke : mrproper
-	@$(echo) "  ,-*\n (_)\n"
+	@echo "  ,-*\n (_)\n"
 	rm -f *.out
 
 coffee :
