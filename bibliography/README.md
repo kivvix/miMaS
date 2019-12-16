@@ -168,6 +168,9 @@
 - [[Li:2016](pdf/2016-Li.pdf)] **High order finite volume WENO schemes for Euler equations under gravitational fields** (*2016*)
 	G. Li, Y. Xing
 	*Journal of Computational Physics*
+- [[Besse:2017](pdf/2017-Besse.pdf)] **High order exponential integrators for nonlinear Schrödinger equations with application to rotating Bose-Einstein condensates** (*2017*)
+	C. Besse, G. Dujardin, I. Lacroix-Violet
+	*SIAM Journal on Numerical Analysis*
 - [[Meurer:2017](https://doi.org/10.7717/peerj-cs.103)] **SymPy: symbolic computing in Python** (*2017*)
 	A. Meurer, C. P. Smith, M. Paprocki, O. Čertík, S. B. Kirpichev, M. Rocklin, A. Kumar, S. Ivanov, J. K. Moore, S. Singh, T. Rathnayake, S. Vig, B. E. Granger, R. P. Muller, F. Bonazzi, H. Gupta, S. Vats, F. Johansson, F. Pedregosa, M. J. Curry, A. R. Terrel, Š. Roučka, A. Saboo, I. Fernando, S. Kulal, R. Cimrman, A. Scopatz
 	*PeerJ Computer Science*
@@ -207,4 +210,8 @@
 - [[Banks:2019](pdf/2019-Banks(1).pdf)] **High order accurate conservative finite difference methods for Vlasov equations in 2D+2V** (*2019*)
 	J. W. Banks, A. Gianesini. Odu, R. Berger, T. Chapman, W. Arrighi, S. Brunner
 	*SIAM Journal on Scientific Computing*
+
+# Links
+
+![Links between all articles](biblio.png)
 

@@ -46,4 +46,8 @@ def entry_to_string (data,e):
 print("""# Bibliography
 
 {}
+
+# Links
+
+![Links between all articles](biblio.png)
 """.format("\n".join([ entry_to_string(data,e) for e in entries ])))
