@@ -1,0 +1,3 @@
+include *.md
+recursive-include ponio *.pickles
+include ponio/template/*.temp.*

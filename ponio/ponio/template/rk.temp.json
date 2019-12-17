@@ -1,0 +1,19 @@
+{
+  "id": {{ rk.id }},
+  "label": {{ rk.label }},
+  "order": {{ rk.order }},
+  "stages": {{ rk.stages }},
+  "butcher_tableau": {{ rk.butcher_tableau }},
+  "caracteristic_function": {{ rk.caracteristic_function }},
+  "scheme": {{ rk.scheme }},
+  "scheme_lawson": {{ rk.scheme_lawson }},
+  "order_star": "data:image/png;base64,{{ rk.order_star }}",
+  "stability_domain": {{ rk.stability_domain }},
+  "cfl": {
+    "weno5": {{ rk.cfl.weno5 }},
+    "weno3": {{ rk.cfl.weno3 }},
+    "y_max": {{ rk.cfl.y_max }},
+    "x_max": {{ rk.cfl.x_max }}
+  }
+}
+
