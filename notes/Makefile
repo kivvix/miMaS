@@ -37,22 +37,27 @@ $(BUILD_dir)/img:
 html: $(BUILD_dir) $(DES_CSS) $(DES_JS) $(SRC_MD) $(DES_IMG) $(BUILD_dir)/$(JOURNAL_file)
 	@echo "\033[36m> Convert mardown files into a HTML file\033[0m"
 
-$(BUILD_dir)/$(JOURNAL_file): $(SRC_MD) template/after.html
+#--css=style/boucdoc.css --css=style/pandoc.css
+$(BUILD_dir)/$(JOURNAL_file): $(SRC_MD) template/before.html template/after.html
 	@echo "\033[35m+ $@\033[0m"
 	pandoc --wrap=preserve \
 		--metadata-file=metadata.yaml \
-		--css=style/boucdoc.css --css=style/pandoc.css \
+		--css=style/main.css --css=style/untitled.css \
 		-f $(subst $(eval) ,+,$(PANDOC_format)) \
 		--standalone -t html5 \
+		--include-before-body=template/before.html \
 		--include-after-body=template/after.html \
 		--katex=https://cdn.jsdelivr.net/npm/katex@0.10.0-beta/dist/ \
+		--highlight-style=breezeDark \
 		$(filter %.md,$^) \
 		-o $@
 
 # copy css files from template directory
 $(BUILD_dir)/style/%.css: template/style/%.css $(BUILD_dir)/style
-	@echo "\033[35m+ $@\033[0m"
-	cp $< $@
+	#@echo "\033[35m+ $@\033[0m"
+	#cp $< $@
+	@ echo "\033[36mtransform copy $< to $@\033[0m"
+	gsed -r ':a; s%(.*)/\*.*\*/%\1%; ta; /\/\*/ !b; N; ba' $< | sed '/^\s*$$/d' | gsed -r 's/^[[:blank:]]+//' | tr -d '\n' > $@
 
 # copy js files from template directory
 $(BUILD_dir)/js/%.js: template/js/%.js $(BUILD_dir)/js
@@ -69,7 +74,13 @@ $(BUILD_dir)/img/%.png: sources/img/%.png $(BUILD_dir)/img
 template/after.html: $(DES_JS)
 	@echo "\033[35m+ $@\033[0m"
 	touch $@
-	echo "$(foreach js,$(DES_JS),<script type='text/javascript' src='js/$(notdir js/$(js))' ></script>)" >> $@
+	echo "</main>\n<footer>🥝</footer>\n$(foreach js,$(DES_JS),<script type='text/javascript' src='js/$(notdir js/$(js))' ></script>\n)" > $@
+
+template/before.html:
+	@echo "\033[35m+ $@\033[0m"
+	touch $@
+	echo "<main>\n" > $@
+
 
 # misc rules ================
 # make a new day if it doesn't exist
@@ -83,7 +94,7 @@ sources/%.md:
 
 # edit the newest file (but doesn't make a new file if it's a new day)
 edit:
-	vim $(shell ls -t sources/*.md | head -1)
+	vim +3 $(shell ls -t sources/*.md | head -1)
 
 # remove all $(BUILD_dir)
 clear:
@@ -93,4 +104,6 @@ clear:
 # a test to send automatically to ftp server
 USER = josmassot@perso.univ-rennes1.fr/josselin.massot
 FILE = $(BUILD_dir)/$(JOURNAL_file)
+
+# https://www.youtube.com/watch?v=35ZHOWFt_sE&list=PLy_WDDbT4njE5q0F2pSeyNVHDonSaYnSz
 

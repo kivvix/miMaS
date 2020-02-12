@@ -1,0 +1,282 @@
+html {
+  margin: 0; padding: 0;
+
+  font-family: var(--font-family,sans-serif);
+  font-variant-ligatures: historical-ligatures;
+  -moz-font-variant-ligatures: historical-ligatures;
+  -webkit-font-variant-ligatures: historical-ligatures;
+  color: var(--html-fg-color,#242424);
+}
+body {
+  margin: 0; padding: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+*::-moz-selection {
+  background: rgba(255, 255, 0, 0.3);
+  color: #000;
+}
+*::selection {
+  background: rgba(255, 255, 0, 0.3);
+  color: #000;
+}
+
+main {
+  width: 95%;
+  max-width: 600px;
+  margin: 0 auto;
+
+  /* counter */
+  counter-reset: section;
+}
+footer {
+  text-align: right;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #111;
+  line-height: 125%;
+  margin-top: 2em;
+  font-weight: normal;
+
+  display: inline-block; width: 100%; /* for anchors */
+}
+h4, h5, h6 {
+  font-weight: bold;
+}
+
+h1 { font-size: 2.5em; }
+h2 { font-size: 2em;   }
+h3 { font-size: 1.5em; }
+h4 { font-size: 1.2em; }
+h5 { font-size: 1em;   }
+h6 { font-size: 0.9em; }
+
+/* rest all counter for each subsection */
+h1 { counter-reset: subsection fig equation tab; }
+h2 { counter-reset: subsubsection; }
+h3 { counter-reset: paragraph; }
+h4 { counter-reset: subparagraph; }
+h5 { counter-reset: subsubparagraph; }
+
+h1::before, h2::before, h3::before, h4::before, h5::before, h6::before {
+  display: inline-block;
+  text-align: right;
+  width: 3.4em;
+  margin-left: -3.5em;
+  margin-right: 1rem;
+}
+@media print, (max-width: 750px) {
+  h1::before, h2::before, h3::before, h4::before, h5::before, h6::before {
+    margin-left: 0;
+    display: inline;
+  }
+}
+
+h1::before { counter-increment: section;         content: counter(section) " - "; }
+h2::before { counter-increment: subsection;      content: counter(section)"."counter(subsection) " - "; }
+h3::before { counter-increment: subsubsection;   content: counter(section)"."counter(subsection)"."counter(subsubsection) " - "; }
+h4::before { counter-increment: paragraph;       content: counter(paragraph)" ⇝ "; }
+h5::before { counter-increment: subparagraph;    content: counter(paragraph)"."counter(subparagraph) " ⇝ "; }
+h6::before { counter-increment: subsubparagraph; content: counter(paragraph)"."counter(subparagraph)"."counter(subsubparagraph) " ⇝ "; }
+
+/* main title */
+h1.title { text-align: center; }
+h1.title::before { counter-increment: none; content: ""; }
+.author::before { content: ""; }
+.author { display: inline-block; }
+.author:after { content: ", "; }
+.author:last-child:after { content: ""; }
+
+a {
+  color: #0645ad;
+  text-decoration: none;
+}
+a:visited { color: #0b0080; }
+a:hover   { color: #06e;    }
+a:active  { color: #faa700; }
+a:focus   { outline: thin dotted; }
+
+a::-moz-selection {
+  background: rgba(255, 255, 0, 0.3);
+  color: #0645ad;
+}
+a::selection {
+  background: rgba(255, 255, 0, 0.3);
+  color: #0645ad;
+}
+
+p {
+  text-align: justify;
+  margin: 1em 0;
+}
+
+blockquote {
+  color: #666666;
+  margin: 0;
+  padding-left: 3em;
+  border-left: 0.5em #EEE solid;
+}
+
+table {
+  border-collapse: collapse;
+  margin-left: auto;
+  margin-right:auto;
+  caption-side: bottom;
+  margin-bottom: 2em;
+  border-spacing: 0;
+  border-collapse: collapse;
+}
+tr.odd, tr.even { border-top: 1px solid #424242; }
+table th {
+  padding: .2em 1em;
+  border-left: 1px solid #242424;
+}
+table th:first-child { border-left: none; }
+table td {
+  padding: .2em 1em;
+  border-left: 1px solid #424242;
+  vertical-align: top;
+}
+table td:first-child { border-left: none; }
+
+img { max-width: 100%; }
+/* in pandoc, div are only use for subfigures */
+div {
+  counter-reset: subfig;
+  text-align: center;
+}
+/* title of subfigures */
+div p { text-align: center; }
+figure {
+  display: block;
+  width: 90%;
+  margin: 2rem auto;
+  text-align: center;
+}
+div figure {
+  display: inline-block;
+  width: 49%;
+  z-index: 2;
+  background: rgba(255,255,255,0);
+  transition: all 1.0s ease-in-out;
+  transition-delay: 0.5s;
+}
+/*
+div figure:hover {
+  transform: scale(1.75);
+  background: rgba(255,255,255,0.8);
+  box-shadow: 0px 1px 3px 1px rgba(42, 42, 42, 0.7);
+}
+*/
+figcaption::before , div p::before {
+  counter-increment: fig;
+  content: "Fig"counter(section)"."counter(fig)" - ";
+}
+div figcaption::before {
+  counter-increment: subfig;
+  content: "("counter(subfig,lower-alpha)") ";
+}
+table caption::before {
+  counter-increment: tab;
+  content: "Tab"counter(section)"."counter(tab)" - ";
+}
+
+ol,ul {
+  list-style-position: outside;
+  padding-left: 2em;
+}
+
+/* limit length of equations */
+.math.display { display:block; overflow: scroll; max-width: 100%; }
+
+/* code */
+code { font-size: 110%; }
+code.sourceCode { white-space: pre; font-size: 95%; }
+div.sourceCode { padding: 5mm 0; }
+.term code::before { content: "$ "; }
+pre.numberSource a.sourceLine::before {  }
+pre.numberSource a.sourceLine:target, pre.numberSource a.sourceLine:target::before { background-color:  #f9eb90; }
+pre.numberSource a.sourceLine:target { min-width: 100%; }
+.sourceCode { position: relative; text-align: left; }
+.sourceCode a.code-anchor {
+  z-index: 4;
+  display: block;
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  text-decoration: none;
+}
+.sourceCode a.code-anchor::befor {
+  content: "\260D";
+  visibility:hidden;
+  padding: 0 2rem;
+  font-size: 2rem;
+  text-decoration: none;
+  font-weight: lighter;
+}
+.sourceCode:hover  a.code-anchor::before { visibility:visible; }
+.sourceCode:target a.code-anchor::before { visibility:visible; color: #db5022; }
+/* test theme correction */
+code span.kw { color: #cfffc2; }
+code span.op { color: #cfb2cf; }
+
+
+/* anchors */
+h1:target, h2:target, h3:target,h4:target, h5:target, h6:target,
+div:target, a.eq:target, a.citation:target, p:target, li:target,
+span:target .katex-display
+{ animation: highlight 2.5s ease; }
+@keyframes highlight {
+  from { background: rgba(255, 255, 0, 0.3); }
+  to   { background: transparent; }
+}
+.anchor::before {
+  visibility:hidden;
+  display: inline-block;
+  float: right;
+  text-decoration: none;
+  font-weight: lighter;content: "\260D";
+}
+h1:hover .anchor::before, h2:hover .anchor::before, h3:hover .anchor::before,
+h4:hover .anchor::before, h5:hover .anchor::before, h6:hover .anchor::before
+{ visibility:visible; }
+h1:target .anchor::before, h2:target .anchor::before, h3:target .anchor::before,
+h4:target .anchor::before, h5:target .anchor::before, h6:target .anchor::before
+{ visibility:visible; color: #db5022; }
+
+/* bibliography */
+#refs h1::before { content: ""; }
+#refs, #refs div { counter-reset: none; text-align: left; }
+#refs p:before   { counter-increment: none; content: ""; }
+#refs { counter-reset: biblio; }
+#refs > div { position: relative;counter-increment: biblio;padding: 0 !important; margin: 0 !important;margin-bottom: 1rem !important;text-align: right; }
+#refs > div:before { content: "["counter(biblio)"]";font-weight: bold; margin-left: -2em;position: absolute; left: -1rem; }
+#refs p { text-align: left !important;display: block;margin: 0; margin-bottom: -0.7rem; }
+#refs a.autoref { display: inline-block;margin: auto 0.2rem;font-size: 0.8rem; }
+
+/* lightbox */
+.cb-lightbox {
+  display: none;
+}
+.content-lightbox {
+  display: none;
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: #ffffffaa;
+  z-index: 99;
+}
+.content-lightbox img {
+  max-width: 100%; max-height: 100%;
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  border: 1px solid #ddd;
+}
+.cb-lightbox:checked ~ .content-lightbox {
+  display: block;
+}
+
