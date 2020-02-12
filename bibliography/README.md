@@ -9,6 +9,12 @@
 - [[Alexander:1976](pdf/1976-Alexander.pdf)] **Diagonally Implicit Runge–Kutta Methods for Stiff O.D.E.'s** (*1976*)
 	R. Alexander
 	*Journal on Numerical Analysis*
+- [[Dormand:1978](pdf/1978-Dormand.pdf)] **New Runge-Kutta algorithms for numerical simulation in dynamical astronomy** (*1978*)
+	J. Dormand, P. Prince
+	*Celestial mechanics*
+- [[Dormand:1980](pdf/1980-Dormand.pdf)] **A family of embedded Runge-Kutta formulae** (*1980*)
+	J. Dormand, P. Prince
+	*Journal of Computational and Applied Mathematics*
 - [[Yoshida:1990](pdf/1990-Yoshida.pdf)] **Construction of higher order symplectic integrators** (*1990*)
 	H. Yoshida
 	*Physics Letters A*
@@ -201,6 +207,9 @@
 - [[Crestetto:2018](pdf/2018-Crestetto.pdf)] **A particle micro-macro decomposition based numercial scheme for collisional kinetic equations in the diffusion scaling** (*2018*)
 	A. Crestetto, N. Crouseilles, M. Lemou
 	*Communications in Mathematical Sciences*
+- [[Blanes:2019](pdf/2019-Blanes.pdf)] **Splitting and composition methods with embedded error estimators** (*2019*)
+	S. Blanes, F. Casas, M. Thalhammer
+	*Applied Numerical Mathematics*
 - [[Crouseilles:2019](pdf/2019-Crouseilles.pdf)] **Some few examples of exponential integrators and their stability** (*2019*)
 	N. Crouseilles
 	 
@@ -210,6 +219,9 @@
 - [[Banks:2019](pdf/2019-Banks(1).pdf)] **High order accurate conservative finite difference methods for Vlasov equations in 2D+2V** (*2019*)
 	J. W. Banks, A. Gianesini. Odu, R. Berger, T. Chapman, W. Arrighi, S. Brunner
 	*SIAM Journal on Scientific Computing*
+- [[Crouseilles:2020](pdf/2020-Crouseilles.pdf)] **Poisson bracket for one electron hybrid model** (*2020*)
+	N. Crouseilles
+	 
 
 # Links
 
