@@ -54,7 +54,7 @@ $(LIB_dir)/lib$(PROJET).so : $(LIB_dir) $(OBJ_dir) $(OBJ)
 
 $(OBJ_dir)/%.o : $(SRC_dir)/%.cc $(HEADER_dir)/%.h
 	@echo "\033[95m$@\033[0m"
-	$(CXX) $(CFLAGS) -o $@ -c $<
+	$(CXX) $(CFLAGS) $(foreach inc,$(INCLUDES),-I $(inc)) -o $@ -c $<
 
 $(OBJ_dir) :
 	@echo "\033[92mmake $@ directory\033[0m"

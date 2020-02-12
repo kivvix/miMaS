@@ -67,6 +67,9 @@ class field
     struct range {
       _T x_min=0.  , x_max=1.; // default value
       _T v_min=-1. , v_max=1.; // default value
+
+      _T len_x () const { return x_max - x_min; }
+      _T len_v () const { return v_max - v_min; }
     } range;
 
     //// CONSTRUCTORS ///////////////////////
@@ -152,6 +155,26 @@ class field
     const auto
     num_elements () const
     { return m_data.num_elements(); }
+
+    const auto
+    begin () const
+    { return m_data.begin(); }
+    const auto
+    cbegin () const
+    { return m_data.begin(); }
+    auto
+    begin ()
+    { return m_data.begin(); }
+
+    const auto
+    end () const
+    { return m_data.end(); }
+    const auto
+    cend () const
+    { return m_data.end(); }
+    auto
+    end ()
+    { return m_data.end(); }
 
     const auto
     begin ( size_type k ) const
@@ -329,11 +352,11 @@ template < typename _T , std::size_t NumDimsV >
 _T
 energy ( field<_T,NumDimsV> const& f , ublas::vector<_T> const& E )
 {
-  _T H = 0.;
+  _T H = double{0.};
 
   for ( typename field<_T,NumDimsV>::size_type k=0 ; k<f.size(0) ; ++k ) {
     for ( typename field<_T,NumDimsV>::size_type i=0 ; i<f.size_x() ; ++i ) {
-      H += SQ(k*f.step.dv+f.range.v_min) * f[k][i] * f.step.dv*f.step.dx;
+      H += SQ( (_T(k)*f.step.dv+f.range.v_min) ) * f[k][i] * f.step.dv*f.step.dx;
     }
   }
 
@@ -342,6 +365,21 @@ energy ( field<_T,NumDimsV> const& f , ublas::vector<_T> const& E )
   }
 
   return H;
+}
+
+template < typename _T , std::size_t NumDimsV >
+_T
+kinetic_energy ( field<_T,NumDimsV> const& f )
+{
+  _T Ec = double{0.};
+
+  for ( typename field<_T,NumDimsV>::size_type k=0 ; k<f.size(0) ; ++k ) {
+    for ( typename field<_T,NumDimsV>::size_type i=0 ; i<f.size_x() ; ++i ) {
+      Ec += SQ( (_T(k)*f.step.dv+f.range.v_min) ) * f[k][i] * f.step.dv*f.step.dx;
+    }
+  }
+
+  return Ec;
 }
 
 #undef SQ
