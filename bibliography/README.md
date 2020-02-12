@@ -207,10 +207,13 @@
 - [[Crestetto:2018](pdf/2018-Crestetto.pdf)] **A particle micro-macro decomposition based numercial scheme for collisional kinetic equations in the diffusion scaling** (*2018*)
 	A. Crestetto, N. Crouseilles, M. Lemou
 	*Communications in Mathematical Sciences*
+- [[Crouseilles:2019b](pdf/2019-Crouseilles(b).pdf)] **Exponential methods for solving hyperbolic problems with application to kinetic equations** (*2019*)
+	N. Crouseilles, L. Einkemmer, J. Massot
+	 
 - [[Blanes:2019](pdf/2019-Blanes.pdf)] **Splitting and composition methods with embedded error estimators** (*2019*)
 	S. Blanes, F. Casas, M. Thalhammer
 	*Applied Numerical Mathematics*
-- [[Crouseilles:2019](pdf/2019-Crouseilles.pdf)] **Some few examples of exponential integrators and their stability** (*2019*)
+- [[Crouseilles:2019a](pdf/2019-Crouseilles(a).pdf)] **Some few examples of exponential integrators and their stability** (*2019*)
 	N. Crouseilles
 	 
 - [[Holderied:2019](pdf/2019-Holderied.pdf)] **Investigation of Finite Element Methods for a 4D Hyrbid Plasma Model** (*2019*)
