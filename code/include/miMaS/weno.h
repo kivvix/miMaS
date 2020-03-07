@@ -148,4 +148,111 @@ trp_v ( field<_T,NumDimsV> const& u , ublas::vector<_T> const& E )
 
 } // namespace weno
 
+namespace wenolin {
+
+using namespace boost::numeric;
+
+/**
+  @fn template < class IteratorTuple > auto local_flux ( boost::zip_iterator<IteratorTuple> & f_it )
+  @brief Compute local flux $\left( f_{i,k+\frac{1}{2}}^2 , f_{i,k+\frac{1}{2}}^-\right)$
+  @param `boost::zip_iterator<IteratorTuple> f_it` a `boost::zip_iterator` of length 6 on $(f_{i,k-2},\dots,f_{i,k+3})$ values
+  @return a pair of flux plus and minus
+**/
+template < typename IteratorTuple >
+auto
+local_flux ( boost::zip_iterator<IteratorTuple> const& f_it )
+{
+  typedef typename std::remove_cv<typename std::remove_reference<decltype(f_it->template get<0>())>::type>::type _T; // récupération du type stocké dans le premier itérateur du zip_iterator (sans const ni reference)
+
+  // $f_{i,k+1/2}^+$
+  _T w0p = 0.1, w1p = 0.6, w2p = 0.3;
+
+  _T fikp12p = w0p*( (2./6.)*f_it->template get<0>() - (7./6.)*f_it->template get<1>() + (11./6.)*f_it->template get<2>() )
+             + w1p*(-(1./6.)*f_it->template get<1>() + (5./6.)*f_it->template get<2>() +  (2./6.)*f_it->template get<3>() )
+             + w2p*( (2./6.)*f_it->template get<2>() + (5./6.)*f_it->template get<3>() -  (1./6.)*f_it->template get<4>() );
+
+  // $f_{i,k+1/2}^-$
+  _T w0m = 0.1, w1m = 0.6, w2m = 0.3;
+
+  _T fikp12m = w2m*(-(1./6.)*f_it->template get<1>() + (5./6.)*f_it->template get<2>() + (2./6.)*f_it->template get<3>() )
+             + w1m*( (2./6.)*f_it->template get<2>() + (5./6.)*f_it->template get<3>() - (1./6.)*f_it->template get<4>() )
+             + w0m*((11./6.)*f_it->template get<3>() - (7./6.)*f_it->template get<4>() + (2./6.)*f_it->template get<5>() );
+  
+  // return a pair of fluxes, one loop on the data structure for two fluxes
+  return std::make_pair(fikp12p,fikp12m);
+}
+
+
+/**
+  @fn template < typename _T , std::size_t NumDimsV > boost::multi_array<std::pair<_T,_T>,NumDimsV+1> flux ( flied<_T,NumDimsV> const& u )
+  @brief Compute flux array $\left( f_{i,k+\frac{1}{2}}^2 , f_{i,k+\frac{1}{2}}^-\right)_{i,k}$
+  @param `flied<_T,NumDimsV> const& u` the field to transport
+  @return a `multi_array<std::pair<_T,_T>,NumDimsV+1>` of all flux (plus and minus)
+**/
+template < typename _T , std::size_t NumDimsV >
+boost::multi_array<std::pair<_T,_T>,NumDimsV+1>
+flux ( field<_T,NumDimsV> const& u )
+{
+  boost::multi_array<std::pair<_T,_T>,NumDimsV+1> fikp12(tools::array_view<const std::size_t>(u.shape(),NumDimsV));
+
+  for ( std::size_t k=0 ; k<2 ; ++k ) {
+    std::size_t i=0;
+    for ( auto it = u.begin_border_stencil(k) ; it != u.end_border_stencil(k) ; ++it , ++i ) {
+      fikp12[k][i] = local_flux(it);
+    }
+  }
+  for ( std::size_t k=2 ; k<u.size(0)-3 ; ++k ) {
+    std::size_t i=0;
+    for ( auto it = u.begin_stencil(k) ; it != u.end_stencil(k) ; ++it , ++i ) {
+      fikp12[k][i] = local_flux(it);
+    }
+  }
+  for ( std::size_t k=u.size(0)-3 ; k<u.size(0) ; ++k ) {
+    std::size_t i=0;
+    for ( auto it = u.begin_border_stencil(k) ; it != u.end_border_stencil(k) ; ++it , ++i ) {
+      fikp12[k][i] = local_flux(it);
+    }
+  }
+  return fikp12;
+}
+
+/**
+  @fn template < typename _T , std::size_t NumDimsV > auto trp_v ( field<_T,NumDimsV> const& u , ublas::vector<_T> const& E )
+  @brief Transport a field `u` at velocity `E`
+  @param `flied<_T,NumDimsV> const& u` the field to transport
+  @param `ublas::vector<_T> const& E` the velocity in $v$-direction
+  @return a `field<_T,NumDimsV>` a field with transported data at velocity `E` in $v$-direction
+**/
+template < typename _T , std::size_t NumDimsV >
+auto
+trp_v ( field<_T,NumDimsV> const& u , ublas::vector<_T> const& E )
+{
+  field<_T,NumDimsV> trp(tools::array_view<const std::size_t>(u.shape(),NumDimsV+1)); // !?? NumDimsV+1
+
+  ublas::vector<_T> Em(E.size()) , Ep(E.size());
+
+  for ( auto i=0 ; i<E.size() ; ++i ) {
+    Ep(i) = std::max(E(i),0.);
+    Em(i) = std::min(E(i),0.);
+  }
+
+  auto fikp12 = flux(u);
+
+  { auto k=0,km1=trp.size(0)-1;
+    for ( auto i=0 ; i<trp.size(1) ; ++i ) {
+      trp[k][i] = ( Ep(i)*(fikp12[k][i].first  - fikp12[km1][i].first)
+                  + Em(i)*(fikp12[k][i].second - fikp12[km1][i].second) )/u.step.dv;
+    }
+  }
+  for ( auto k=1 ; k<trp.size(0) ; ++k ) {
+    for ( auto i=0 ; i<trp.size(1) ; ++i ) {
+      trp[k][i] = ( Ep(i)*(fikp12[k][i].first  - fikp12[k-1][i].first)
+                  + Em(i)*(fikp12[k][i].second - fikp12[k-1][i].second) )/u.step.dv;
+    }
+  }
+
+  return trp;
+}
+
+} // namespace wenolin
 #endif

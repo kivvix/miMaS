@@ -25,7 +25,7 @@ INC = $(wildcard $(HEADER_dir)/*.h)
 GLLIBS = -lm
 
 ifeq ($(DEBUG_MODE),Y)
-	CFLAGS += -O0 -DDEBUG_MODE
+	CFLAGS += -O0 -DDEBUG_MODE -Wall
 	DEBUGFLAGS = -p
 	
 	COMPIL_mode = "\033[1mCompilation en mode debug\033[0m"

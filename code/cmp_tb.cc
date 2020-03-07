@@ -137,7 +137,7 @@ main(int argc, char const *argv[])
   auto cd2  = [&](field<double,1>const& f , ublas::vector<double> const& E )->field<double,1> { return o2::trp_v(f,E); };
 
   // time scheme init
-  lawson::RK33<poisson<double>> rk(c.Nx,c.Nv,f.range.len_x(),f.shape(),v,kx,weno);
+  expRK::RK22<poisson<double>> rk(c.Nx,c.Nv,f.range.len_x(),f.shape(),v,kx,cd2);
 
   rk.E = rk.poisson_solver(f.density());
   {
@@ -182,6 +182,18 @@ main(int argc, char const *argv[])
 
   std::ofstream of;
 
+#define save_data(data,suffix,x_y) {\
+  std::stringstream filename; filename << #data << suffix << ".dat"; \
+  of.open( c.output_dir / filename.str() );\
+  std::transform( data.begin() , data.end() , std::ostream_iterator<std::string>(of,"\n") , x_y );\
+  of.close();\
+}
+  save_data(ee,"",dt_y);
+  save_data(Emax,"",dt_y);
+  save_data(H,"",dt_y);
+  save_data(Ec,"",dt_y);
+
+/*
   of.open( c.output_dir / "ee.dat" );
   std::transform( ee.begin() , ee.end() , std::ostream_iterator<std::string>(of,"\n") , dt_y );
   of.close();
@@ -197,7 +209,7 @@ main(int argc, char const *argv[])
   of.open( c.output_dir / "Ec.dat" );
   std::transform( Ec.begin() , Ec.end() , std::ostream_iterator<std::string>(of,"\n") , dt_y );
   of.close();
-
+*/
   auto dx_y = [&,count=0](auto const& y) mutable { std::stringstream ss; ss<< f.step.dx*(count++) <<" "<<y; return ss.str(); };
 
   of.open( c.output_dir / "E.dat" );

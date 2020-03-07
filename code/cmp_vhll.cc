@@ -6,6 +6,9 @@
 #include <valarray>
 #include <sstream>
 #include <filesystem>
+#include <string>
+
+using namespace std::string_literals;
 
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/io.hpp>
@@ -19,6 +22,8 @@
 #include "miMaS/poisson.h"
 #include "miMaS/rk.h"
 #include "miMaS/config.h"
+#include "miMaS/signal_handler.h"
+#include "miMaS/iteration.h"
 
 namespace o2 {
   template < typename _T , std::size_t NumDimsV >
@@ -48,12 +53,19 @@ namespace o2 {
 }
 
 struct iter_s {
-  int iter;
+  std::size_t iter;
   double dt;
   double current_time;
-  double L;
+  double Lhfh;
+  double LE;
 };
 
+#define save(data,dir,suffix,x_y) {\
+  std::stringstream filename; filename << #data << "_" << suffix << ".dat"; \
+  std::ofstream of( dir / filename.str() );\
+  std::transform( data.begin() , data.end() , std::ostream_iterator<std::string>(of,"\n") , x_y );\
+  of.close();\
+}
 
 namespace math = boost::math::constants;
 const std::complex<double> & I = std::complex<double>(0.,1.);
@@ -71,13 +83,17 @@ maxwellian ( double rho , double u , double T ) {
 int
 main(int argc, char const *argv[])
 {
+  const double sigma = 1.733;
+
   std::filesystem::path p("config.init");
   if ( argc > 1 ) {
     p = argv[1];
   }
   auto c = config(p);
+  c.name = "vhll";
 
   std::filesystem::create_directories(c.output_dir);
+  std::cout << c << std::endl;
   std::ofstream oconfig( c.output_dir / "config.init" );
   oconfig << c << std::endl;
   oconfig.close();
@@ -103,8 +119,7 @@ main(int argc, char const *argv[])
     for ( int i=-c.Nx/2 ; i<0 ; ++i ) { kx[c.Nx+i] = 2.*math::pi<double>()*i/l; }
   }
 
-  double alpha = c.alpha , ui = 2.;
-  auto tb_M1    = maxwellian( 0.5*alpha ,  ui , 1.   ) , tb_M2  = maxwellian( 0.5*alpha , -ui , 1.  );
+  auto tb_M1    = maxwellian( 0.5*c.alpha ,  c.ui , 1.   ) , tb_M2  = maxwellian( 0.5*c.alpha , -c.ui , 1.  );
 
   for (field<double,2>::size_type k=0 ; k<fh.size(0) ; ++k ) {
     for (field<double,2>::size_type i=0 ; i<fh.size(1) ; ++i ) {
@@ -116,30 +131,62 @@ main(int argc, char const *argv[])
   }
   fh.write( c.output_dir / "init_vhll.dat" );
 
-  unsigned int i_t = 0;
-  double current_time = 0.;
-  double dt = 1.*fh.step.dv;
-
+  iteration::iteration<double> iter;
+  iter.iter = 0;
+  iter.current_time = 0.;
+  iter.dt = 0.5*fh.step.dv;
 
   ublas::vector<double> uc(c.Nx,0.);
   ublas::vector<double> E (c.Nx,0.);
 
-  std::vector<double> ee;   ee.reserve(int(std::ceil(c.Tf/dt))+1);
-  std::vector<double> Emax; Emax.reserve(int(std::ceil(c.Tf/dt))+1);
-  std::vector<double> H;    H.reserve(int(std::ceil(c.Tf/dt))+1);
+  std::vector<double> ee;   ee.reserve(int(std::ceil(c.Tf/iter.dt))+1);
+  std::vector<double> Emax; Emax.reserve(int(std::ceil(c.Tf/iter.dt))+1);
+  std::vector<double> H;    H.reserve(int(std::ceil(c.Tf/iter.dt))+1);
 
-  std::vector<double> times; times.reserve(int(std::ceil(c.Tf/dt))+1);
-  std::vector<double> dts;   dts.reserve(int(std::ceil(c.Tf/dt))+1);
-  std::vector<iter_s> iterations; iterations.reserve(int(std::ceil(c.Tf/dt))+1);
+  std::vector<double> times; times.reserve(int(std::ceil(c.Tf/iter.dt))+1);
+  std::vector<iteration::iteration<double>> iterations;         iterations.reserve(int(std::ceil(c.Tf/iter.dt))+1);
+  std::vector<iteration::iteration<double>> success_iterations; success_iterations.reserve(int(std::ceil(c.Tf/iter.dt))+1);
 
+  auto save_data = [&] ( std::string && suffix ) {
+    suffix = c.name + suffix;
 
-  const double rho_c = 1.-alpha;
+    // save iterations informations
+    auto writer_iter = [] ( auto const & it ) {
+      std::stringstream ss; ss << it;
+      return ss.str();
+    };
+    c << monitoring::data( "iterations_"+suffix+".dat"         , iterations         , writer_iter );
+    c << monitoring::data( "success_iterations_"+suffix+".dat" , success_iterations , writer_iter );
+
+    // save temporel data
+    auto dt_y = [&,count=0] (auto const& y) mutable {
+      std::stringstream ss; ss<<times[count++]<<" "<<y;
+      return ss.str();
+    };
+    c << monitoring::data( "ee_"+suffix+".dat"   , ee   , dt_y );
+    c << monitoring::data( "Emax_"+suffix+".dat" , Emax , dt_y );
+    c << monitoring::data( "H_"+suffix+".dat"    , H    , dt_y );
+
+    // save distribution function
+    for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(hfh[k].begin(),hfh[k].end(),fh[k].begin()); }
+    fh.write( c.output_dir / ("vp_"+suffix+".dat") );
+
+  };
+
+  signals_handler::signals_handler<SIGINT,SIGILL>::handler( [&]( int signal ) -> void {
+    std::cerr << "\n\033[41;97m ** End of execution after signal " << signal << " ** \033[0m\n";
+    std::cerr << "\033[36msave data...\033[0m\n";
+
+    save_data("_SIGINT");
+  });
+
+  const double rho_c = 1.-c.alpha;
   const double sqrt_rho_c = std::sqrt(rho_c);
   {
     poisson<double> poisson_solver(c.Nx,fh.range.len_x());
     ublas::vector<double> rho(c.Nx,0.);
     rho = fh.density(); // compute density from init data
-    for ( auto i=0 ; i<c.Nx ; ++i ) { rho[i] += (1.-alpha); } // add (1-alpha) for cold particules
+    for ( auto i=0 ; i<c.Nx ; ++i ) { rho[i] += (1.-c.alpha); } // add (1-alpha) for cold particules
     E = poisson_solver(rho);
 
     Emax.push_back( std::abs(*std::max_element( E.begin() , E.end() , [](double a,double b){return (std::abs(a) < std::abs(b));} )) );
@@ -162,17 +209,18 @@ main(int argc, char const *argv[])
                         E1(c.Nx)  , E2(c.Nx)  , E3(c.Nx)  , E4(c.Nx)  , E5(c.Nx)  , E6(c.Nx)  , E7(c.Nx);
   complex_field<double,1> hfh1(boost::extents[c.Nv][c.Nx]),hfh2(boost::extents[c.Nv][c.Nx]),hfh3(boost::extents[c.Nv][c.Nx]),hfh4(boost::extents[c.Nv][c.Nx]),hfh5(boost::extents[c.Nv][c.Nx]),hfh6(boost::extents[c.Nv][c.Nx]),hfh7(boost::extents[c.Nv][c.Nx]);
 
-  while (  current_time < c.Tf ) {
-    std::cout<<"\r ["<<std::setw(6)<<i_t<<"] "<< std::setw(8) << current_time << " (" << std::setw(9) << dt << ")"<<std::flush;
+  while (  iter.current_time < c.Tf ) {
+    std::cout << "\r" << iteration::time(iter) << std::flush;
     
 
 /////////////////////////////////////////////////////////////////////
 /**
-    // RK33
+/////////////////////////////////////////////////////////////////////
+    // RK(3,3) classical
 
     // STAGE 1
     {
-      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(&(hfh[k][0]),&(hfh[k][0])+c.Nx,&(fh[k][0])); }
+      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(hfh[k].begin(),hfh[k].end(),fh[k].begin()); }
       J = fh.courant();
       Edvf = weno::trp_v(fh,E);
 
@@ -191,7 +239,7 @@ main(int argc, char const *argv[])
 
     // STAGE 2
     {
-      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(&(hfh1[k][0]),&(hfh1[k][0])+c.Nx,&(fh[k][0])); }
+      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(hfh1[k].begin(),hfh1[k].end(),fh[k].begin()); }
       J = fh.courant();
       Edvf = weno::trp_v(fh,E1);
 
@@ -210,7 +258,7 @@ main(int argc, char const *argv[])
 
     // STAGE 3
     {
-      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(&(hfh2[k][0]),&(hfh2[k][0])+c.Nx,&(fh[k][0])); }
+      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(hfh2[k].begin(),hfh2[k].end(),fh[k].begin()); }
       J = fh.courant();
       Edvf = weno::trp_v(fh,E2);
 
@@ -229,14 +277,184 @@ main(int argc, char const *argv[])
       }
     } // end stage 3
 
+
 /////////////////////////////////////////////////////////////////////
-/**/
+**
+/////////////////////////////////////////////////////////////////////
+    // RK(3,3) NSSP
+
+    // STAGE 1
+    {
+      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(hfh[k].begin(),hfh[k].end(),fh[k].begin()); }
+      J = fh.courant();
+      Edvf = weno::trp_v(fh,E);
+
+      double c49 = std::cos((4./9.)*dt*sqrt_rho_c), s49 = std::sin((4./9.)*dt*sqrt_rho_c);
+      for ( auto i=0 ; i<c.Nx ; ++i ) {
+        uc1[i] =  uc[i]*c49 - E[i]*s49/sqrt_rho_c - (4./9.)*dt*J[i]*s49/sqrt_rho_c;
+        E1[i]  =  uc[i]*s49*sqrt_rho_c + E[i]*c49 + (4./9.)*dt*J[i]*c49;
+      }
+      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) {
+        d.fft(&(Edvf[k][0]));
+        for ( auto i=0 ; i<c.Nx ; ++i ) {
+          hfh1[k][i] = hfh[k][i]*std::exp((4./9.)*I*kx[i]*Vk(k)*dt) + (4./9.)*dt*d[i]*std::exp((4./9.)*I*kx[i]*Vk(k)*dt);
+        }
+      }
+    } // end stage 1
+
+    // STAGE 2
+    {
+      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(hfh1[k].begin(),hfh1[k].end(),fh[k].begin()); }
+      J = fh.courant();
+      Edvf = weno::trp_v(fh,E1);
+
+      double c23  = std::cos((2./3.)*dt*sqrt_rho_c)  , s23  = std::sin((2./3.)*dt*sqrt_rho_c) ,
+             c109 = std::cos((10./9.)*dt*sqrt_rho_c) , s109 = std::sin((10./9.)*dt*sqrt_rho_c);
+      for ( auto i=0 ; i<c.Nx ; ++i ) {
+        uc2[i] = (29./8.)*(  uc[i]*c23 + E[i]*s23/sqrt_rho_c ) - (21./8.)*(  uc1[i]*c109 + E1[i]*s109/sqrt_rho_c ) + 0.5*dt*J[i]*s109/sqrt_rho_c;
+        E2[i]  = (29./8.)*( -uc[i]*s23*sqrt_rho_c + E[i]*c23 ) - (21./8.)*( -uc1[i]*s109*sqrt_rho_c + E1[i]*c109 ) + 0.5*dt*J[i]*c109;
+      }
+      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) {
+        d.fft(&(Edvf[k][0]));
+        for ( auto i=0 ; i<c.Nx ; ++i ) {
+          hfh2[k][i] = (29./8.)*hfh[k][i]*std::exp(-(2./3.)*I*kx[i]*Vk(k)*dt) - (21./8.)*hfh1[k][i]*std::exp(-(10./9.)*I*kx[i]*Vk(k)*dt) + 0.5*dt*d[i]*std::exp(-(10./9.)*I*kx[i]*Vk(k)*dt);
+        }
+      }
+    } // end stage 2
+
+    // STAGE 3
+    {
+      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(hfh2[k].begin(),hfh2[k].end(),fh[k].begin()); }
+      J = fh.courant();
+      Edvf = weno::trp_v(fh,E2);
+
+      double c1   = std::cos(dt*sqrt_rho_c)          , s1   = std::sin(dt*sqrt_rho_c)         ,
+             c13  = std::cos((1./3.)*dt*sqrt_rho_c)  , s13  = std::sin((1./3.)*dt*sqrt_rho_c) ,
+             c139 = std::cos((13./9.)*dt*sqrt_rho_c) , s139 = std::sin((13./9.)*dt*sqrt_rho_c);
+      for ( auto i=0 ; i<c.Nx ; ++i ) {
+        double tmp_uc =  (25./16.)*(  uc[i]*c1 + E[i]*s1/sqrt_rho_c ) - (9./16.)*(  uc1[i]*c139 + E1[i]*s139/sqrt_rho_c ) - (3./4.)*dt*J[i]*s13/sqrt_rho_c;
+        E[i]          =  (25./16.)*( -uc[i]*s1*sqrt_rho_c + E[i]*c1 ) - (9./16.)*( -uc1[i]*s139*sqrt_rho_c + E1[i]*c139 ) - (3./4.)*dt*J[i]*c13;
+        uc[i] = tmp_uc;
+      }
+      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) {
+        d.fft(&(Edvf[k][0]));
+        for ( auto i=0 ; i<c.Nx ; ++i ) {
+          hfh[k][i] = (25./16.)*hfh[k][i]*std::exp(-I*kx[i]*Vk(k)*dt) - (9./16.)*hfh1[k][i]*std::exp(-(13./9.)*I*kx[i]*Vk(k)*dt) - (3./4.)*dt*d[i]*std::exp(-(1./3.)*I*kx[i]*Vk(k)*dt);
+        }
+      }
+    } // end stage 3
+
+/////////////////////////////////////////////////////////////////////
+**/
+/////////////////////////////////////////////////////////////////////
+
+    // DP4(3)
+    // STAGE 1
+    {
+      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(hfh[k].begin(),hfh[k].end(),fh[k].begin()); }
+      J = fh.courant();
+      Edvf = weno::trp_v(fh,E);
+
+      double c05 = std::cos(0.5*iter.dt*sqrt_rho_c), s05 = std::sin(0.5*iter.dt*sqrt_rho_c);
+      for ( auto i=0 ; i<c.Nx ; ++i ) {
+        uc1[i] =  uc[i]*c05 + E[i]*s05/sqrt_rho_c - 0.5*iter.dt*J[i]*s05/sqrt_rho_c;
+        E1[i]  = -uc[i]*s05*sqrt_rho_c + E[i]*c05 - 0.5*iter.dt*J[i]*c05;
+      }
+      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) {
+        d.fft(&(Edvf[k][0]));
+        for ( auto i=0 ; i<c.Nx ; ++i ) {
+          hfh1[k][i] = hfh[k][i]*std::exp(-0.5*I*kx[i]*Vk(k)*iter.dt) - 0.5*iter.dt*d[i]*std::exp(-0.5*I*kx[i]*Vk(k)*iter.dt);
+        }
+      }
+    } // end stage 1
+
+    // STAGE 2
+    {
+      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(hfh1[k].begin(),hfh1[k].end(),fh[k].begin()); }
+      J = fh.courant();
+      Edvf = weno::trp_v(fh,E1);
+
+      double c05 = std::cos(0.5*iter.dt*sqrt_rho_c), s05 = std::sin(0.5*iter.dt*sqrt_rho_c);
+      for ( auto i=0 ; i<c.Nx ; ++i ) {
+        uc2[i] =  uc[i]*c05 + E[i]*s05/sqrt_rho_c;
+        E2[i]  = -uc[i]*s05*sqrt_rho_c + E[i]*c05 - 0.5*iter.dt*J[i];
+      }
+      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) {
+        d.fft(&(Edvf[k][0]));
+        for ( auto i=0 ; i<c.Nx ; ++i ) {
+          hfh2[k][i] = hfh[k][i]*std::exp(-0.5*I*kx[i]*Vk(k)*iter.dt) - 0.5*iter.dt*d[i];
+        }
+      }
+    } // end stage 2
+
+    // STAGE 3
+    {
+      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(hfh2[k].begin(),hfh2[k].end(),fh[k].begin()); }
+      J = fh.courant();
+      Edvf = weno::trp_v(fh,E2);
+
+      double c1  = std::cos(iter.dt*sqrt_rho_c)     , s1  = std::sin(iter.dt*sqrt_rho_c)    ,
+             c05 = std::cos(0.5*iter.dt*sqrt_rho_c) , s05 = std::sin(0.5*iter.dt*sqrt_rho_c);
+      for ( auto i=0 ; i<c.Nx ; ++i ) {
+        uc3[i] =  uc[i]*c1 + E[i]*s1/sqrt_rho_c - iter.dt*J[i]*s05/sqrt_rho_c;
+        E3[i]  = -uc[i]*s1*sqrt_rho_c + E[i]*c1 - iter.dt*J[i]*c05;
+      }
+      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) {
+        d.fft(&(Edvf[k][0]));
+        for ( auto i=0 ; i<c.Nx ; ++i ) {
+          hfh3[k][i] = hfh[k][i]*std::exp(-I*kx[i]*Vk(k)*iter.dt) - iter.dt*d[i]*std::exp(-0.5*I*kx[i]*Vk(k)*iter.dt);
+        }
+      }
+    } // end stage 3
+
+    // STAGE 4
+    {
+      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(hfh3[k].begin(),hfh3[k].end(),fh[k].begin()); }
+      J = fh.courant();
+      Edvf = weno::trp_v(fh,E3);
+
+      double c1  = std::cos(iter.dt*sqrt_rho_c)     , s1  = std::sin(iter.dt*sqrt_rho_c)    ,
+             c05 = std::cos(0.5*iter.dt*sqrt_rho_c) , s05 = std::sin(0.5*iter.dt*sqrt_rho_c);
+      for ( auto i=0 ; i<c.Nx ; ++i ) {
+        uc4[i] = -(1./3.)*(  uc[i]*c1 + E[i]*s1/sqrt_rho_c ) + (1./3.)*(  uc1[i]*c05 + E1[i]*s05/sqrt_rho_c ) + (2./3.)*(  uc2[i]*c05 + E2[i]*s05/sqrt_rho_c ) + uc3[i]/3.;
+        E4[i]  = -(1./3.)*( -uc[i]*s1*sqrt_rho_c + E[i]*c1 ) + (1./3.)*( -uc1[i]*s05*sqrt_rho_c + E1[i]*c05 ) + (2./3.)*( -uc2[i]*s05*sqrt_rho_c + E2[i]*c05 ) + E3[i]/3. - (1./6.)*iter.dt*J[i];
+      }
+      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) {
+        d.fft(&(Edvf[k][0]));
+        for ( auto i=0 ; i<c.Nx ; ++i ) {
+          hfh4[k][i] = -(1./3.)*hfh[k][i]*std::exp(-I*kx[i]*Vk(k)*iter.dt) + (1./3.)*hfh1[k][i]*std::exp(-0.5*I*kx[i]*Vk(k)*iter.dt) + (2./3.)*hfh2[k][i]*std::exp(-0.5*I*kx[i]*Vk(k)*iter.dt) + hfh3[k][i]/3. - (1./6.)*iter.dt*d[i];
+        }
+      }
+    } // end stage 4
+
+    // STAGE 5
+    {
+      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(hfh4[k].begin(),hfh4[k].end(),fh[k].begin()); }
+      J = fh.courant();
+      Edvf = weno::trp_v(fh,E4);
+
+      double c1  = std::cos(iter.dt*sqrt_rho_c)     , s1  = std::sin(iter.dt*sqrt_rho_c)    ,
+             c05 = std::cos(0.5*iter.dt*sqrt_rho_c) , s05 = std::sin(0.5*iter.dt*sqrt_rho_c);
+      for ( auto i=0 ; i<c.Nx ; ++i ) {
+        uc5[i] = -(1./5.)*(  uc[i]*c1 + E[i]*s1/sqrt_rho_c ) + (1./5.)*(  uc1[i]*c05 + E1[i]*s05/sqrt_rho_c ) + (2./5.)*(  uc2[i]*c05 + E2[i]*s05/sqrt_rho_c ) + uc3[i]/5. + (2./5.)*uc4[i];
+        E5[i]  = -(1./5.)*( -uc[i]*s1*sqrt_rho_c + E[i]*c1 ) + (1./5.)*( -uc1[i]*s05*sqrt_rho_c + E1[i]*c05 ) + (2./5.)*( -uc2[i]*s05*sqrt_rho_c + E2[i]*c05 ) + E3[i]/5. + (2./5.)*E4[i] - (1./10.)*iter.dt*J[i];
+      }
+      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) {
+        d.fft(&(Edvf[k][0]));
+        for ( auto i=0 ; i<c.Nx ; ++i ) {
+          hfh5[k][i] = -(1./5.)*hfh[k][i]*std::exp(-I*kx[i]*Vk(k)*iter.dt) + (1./5.)*hfh1[k][i]*std::exp(-0.5*I*kx[i]*Vk(k)*iter.dt) + (2./5.)*hfh2[k][i]*std::exp(-0.5*I*kx[i]*Vk(k)*iter.dt) + hfh3[k][i]/5. + (2./5.)*hfh4[k][i] - 0.1*iter.dt*d[i];
+        }
+      }
+    } // end stage 5
+
+/////////////////////////////////////////////////////////////////////
+/**
 /////////////////////////////////////////////////////////////////////
 
     //DP5
     // STAGE 1
     {
-      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(&(hfh[k][0]),&(hfh[k][0])+c.Nx,&(fh[k][0])); }
+      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(hfh[k].begin(),hfh[k].end(),fh[k].begin()); }
       J = fh.courant();
       Edvf = weno::trp_v(fh,E);
 
@@ -255,13 +473,14 @@ main(int argc, char const *argv[])
 
     // STAGE 2
     {
-      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(&(hfh1[k][0]),&(hfh1[k][0])+c.Nx,&(fh[k][0])); }
+      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(hfh1[k].begin(),hfh1[k].end(),fh[k].begin()); }
       J = fh.courant();
       Edvf = weno::trp_v(fh,E1);
 
-      double c01 = std::cos(0.1*sqrt_rho_c*dt) , s01 = std::sin(0.1*sqrt_rho_c*dt) , c03 = std::cos(0.3*sqrt_rho_c*dt) , s03 = std::sin(0.3*sqrt_rho_c*dt);
+      double c01 = std::cos(0.1*sqrt_rho_c*dt) , s01 = std::sin(0.1*sqrt_rho_c*dt),
+             c03 = std::cos(0.3*sqrt_rho_c*dt) , s03 = std::sin(0.3*sqrt_rho_c*dt);
       for ( auto i=0 ; i<c.Nx ; ++i ) {
-        uc2[i] = 0.625*(  uc[i]*c03 + E[i]*s03/sqrt_rho_c ) + 0.375*( uc1[i]*c01 + E1[i]*s01/sqrt_rho_c ) - 0.225*dt*J[i]*s01/sqrt_rho_c;
+        uc2[i] = 0.625*(  uc[i]*c03 + E[i]*s03/sqrt_rho_c ) + 0.375*(  uc1[i]*c01 + E1[i]*s01/sqrt_rho_c ) - 0.225*dt*J[i]*s01/sqrt_rho_c;
         E2[i]  = 0.625*( -uc[i]*s03*sqrt_rho_c + E[i]*c03 ) + 0.375*( -uc1[i]*sqrt_rho_c*s01 + E1[i]*c01 ) - 0.225*dt*J[i]*c01;
       }
       for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) {
@@ -274,7 +493,7 @@ main(int argc, char const *argv[])
 
     // STAGE 3
     {
-      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(&(hfh2[k][0]),&(hfh2[k][0])+c.Nx,&(fh[k][0])); }
+      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(hfh2[k].begin(),hfh2[k].end(),fh[k].begin()); }
       J = fh.courant();
       Edvf = weno::trp_v(fh,E2);
 
@@ -295,7 +514,7 @@ main(int argc, char const *argv[])
 
     // STAGE 4
     {
-      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(&(hfh3[k][0]),&(hfh3[k][0])+c.Nx,&(fh[k][0])); }
+      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(hfh3[k].begin(),hfh3[k].end(),fh[k].begin()); }
       J = fh.courant();
       Edvf = weno::trp_v(fh,E3);
 
@@ -318,7 +537,7 @@ main(int argc, char const *argv[])
 
     // STAGE 5
     {
-      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(&(hfh4[k][0]),&(hfh4[k][0])+c.Nx,&(fh[k][0])); }
+      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(hfh4[k].begin(),hfh4[k].end(),fh[k].begin()); }
       J = fh.courant();
       Edvf = weno::trp_v(fh,E4);
 
@@ -341,7 +560,7 @@ main(int argc, char const *argv[])
 
     // STAGE 6
     {
-      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(&(hfh5[k][0]),&(hfh5[k][0])+c.Nx,&(fh[k][0])); }
+      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(hfh5[k].begin(),hfh5[k].end(),fh[k].begin()); }
       J = fh.courant();
       Edvf = weno::trp_v(fh,E5);
 
@@ -364,7 +583,7 @@ main(int argc, char const *argv[])
 
     // STAGE 7
     {
-      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(&(hfh6[k][0]),&(hfh6[k][0])+c.Nx,&(fh[k][0])); }
+      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(hfh6[k].begin(),hfh6[k].end(),fh[k].begin()); }
       J = fh.courant();
       Edvf = weno::trp_v(fh,E6);
 
@@ -384,45 +603,37 @@ main(int argc, char const *argv[])
         }
       }
     } // end stage 7
+/////////////////////////////////////////////////////////////////////
 /**/
+/////////////////////////////////////////////////////////////////////
     // end of time loop
 
     // CHECK local error for compute next time step
-    //double L_E = std::sqrt( std::inner_product( E7.begin() , E7.end() , E6.begin() , 0. ,
-    //  [] ( const auto & a  , const auto & b   ) { return a+b; } ,
-    //  [&]( const auto & en , const auto & en1 ) { return SQ( en1 - en )*fh.step.dx; } ) );
-    double L_E = 0.;
-    for ( auto i=0 ; i<c.Nx ; ++i )
-      { L_E += SQ( E7[i] - E6[i] )*fh.step.dx; }
-    L_E = std::sqrt(L_E);
+    iter.E_error(E5,E4,fh.step.dx);
+    iter.hfh_error(hfh5,hfh4,fh.step.dx*fh.step.dv);
+    std::cout << " -- " << iteration::error(iter) << std::flush;
 
-    double L_hfh = 0.;
-    for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) {
-      for ( auto i=0 ; i<c.Nx ; ++ i ) {
-        L_hfh += SQ( std::abs(hfh6[k][i] - hfh7[k][i]) )*fh.step.dv*fh.step.dx; // ??? dx n'a pas de sens ici...
-      }
-    }
-    L_hfh = std::sqrt(L_hfh);
-
-    if ( std::isnan(L_E) ) { L_E = 100.*c.tol; }
-
-    std::cout << " -- " << std::setw(10) << L_hfh << "        " << std::flush;
-
-    if ( std::abs(L_hfh - c.tol) < c.tol )
+    iter.success = std::abs(iter.error() - c.tol) <= c.tol;
+    if ( iter.success ) // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     {
+      iter.success = true;
       // SAVE TIME STEP
-      std::copy( uc7.begin()  , uc7.end()  , uc.begin()  );
-      std::copy( E7.begin()   , E7.end()   , E.begin()   );
-      std::copy( hfh7.begin() , hfh7.end() , hfh.begin() );
+      std::copy( uc4.begin()  , uc4.end()  , uc.begin()  );
+      std::copy( E4.begin()   , E4.end()   , E.begin()   );
+      std::copy( hfh4.begin() , hfh4.end() , hfh.begin() );
 
       // MONITORING
 
-      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(&(hfh[k][0]),&(hfh[k][0])+c.Nx,&(fh[k][0])); }
       Emax.push_back( std::abs(*std::max_element( E.begin() , E.end() , [](double a,double b){return (std::abs(a) < std::abs(b));} )) );
-      double electric_energy = 0.;
-      for ( const auto & ei : E ) { electric_energy += ei*ei*fh.step.dx; }
-      ee.push_back( std::sqrt(electric_energy) );
+      double electric_energy = std::sqrt(std::accumulate(
+        E.begin() , E.end() , 0. ,
+        [&] ( double partial_sum , double ei ) {
+          return partial_sum + ei*ei*fh.step.dx;
+        }
+      ));
+      ee.push_back( electric_energy );
 
+      for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(hfh[k].begin(),hfh[k].end(),fh[k].begin()); }
       double total_energy = energy(fh,E);
       {
         auto rhoh = fh.density();
@@ -442,48 +653,26 @@ main(int argc, char const *argv[])
       H.push_back( total_energy );
 
       // increment time
-      current_time += dt;
-      times.push_back( current_time );
+      iter.current_time += iter.dt;
+      times.push_back( iter.current_time );
+      success_iterations.push_back( iter );
     }
-    iterations.push_back( { i_t , dt , current_time , L_hfh } );
+    iterations.push_back( iter );
 
-    ++i_t;
-    //std::cout << i_t << " " << current_time << " (" << dt << ") " << c.tol/L_E << "\n";
-    dt = std::pow( c.tol/L_hfh , 0.2 )*dt; // compute optimum next time step
+    ++iter.iter;
 
+    iter.dt = std::pow( c.tol/iter.Lhfh , 0.25 )*iter.dt;
+    if ( iter.current_time+iter.dt > c.Tf ) { iter.dt = c.Tf - iter.current_time; }
   } // while (  i_t*dt < Tf )
-  std::cout<<" ["<<std::setw(5)<<i_t<<"] "<<i_t*dt <<std::endl;
+  std::cout << "\r" << time(iter) << std::endl;
 
-  for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(&(hfh[k][0]),&(hfh[k][0])+c.Nx,&(fh[k][0])); }
-  fh.write( c.output_dir / "vp_vhll.dat" );
+  save_data("dp4");
 
-
-  std::ofstream of;
-
-  of.open( c.output_dir / "iterations.dat" );
-  std::transform( iterations.begin() , iterations.end() , std::ostream_iterator<std::string>(of,"\n") ,
-    [](auto const& it) mutable { std::stringstream ss; ss << it.iter << " " << it.dt << " " << it.current_time << " " << it.L; return ss.str(); } );
-  of.close();
-
-  auto dt_y = [&,count=0](auto const& y) mutable { std::stringstream ss; ss<<times[count++]<<" "<<y; return ss.str(); };
-
-  of.open( c.output_dir / "ee_vhll.dat" );
-  std::transform( ee.begin() , ee.end() , std::ostream_iterator<std::string>(of,"\n") , dt_y );
-  of.close();
-  
-  of.open( c.output_dir / "Emax_vhll.dat" );
-  std::transform( Emax.begin() , Emax.end() , std::ostream_iterator<std::string>(of,"\n") , dt_y );
-  of.close();
-  
-  of.open( c.output_dir / "H_vhll.dat" );
-  std::transform( H.begin() , H.end() , std::ostream_iterator<std::string>(of,"\n") , dt_y );
-  of.close();
-
-  auto dx_y = [&,count=0](auto const& y) mutable { std::stringstream ss; ss<< fh.step.dx*(count++) <<" "<<y; return ss.str(); };
-
-  of.open( c.output_dir / "E_vhll.dat" );
-  std::transform( E.begin() , E.end() , std::ostream_iterator<std::string>(of,"\n") , dx_y );
-  of.close();
+  auto dx_y = [&,count=0](auto const& y) mutable {
+    std::stringstream ss; ss<< fh.step.dx*(count++) <<" "<<y;
+    return ss.str();
+  };
+  c << monitoring::data( "E_"+c.name+".dat" , E , dx_y );
 
   ublas::vector<double> rho  (c.Nx,0.);
   ublas::vector<double> rhoc (c.Nx,0.);
@@ -499,23 +688,17 @@ main(int argc, char const *argv[])
     hrhoc.ifft(&rhoc[0]);
     rho = rhoc + rhoh;
   }
-  of.open( c.output_dir / "rho_vhll.dat" );
-  std::transform( rho.begin() , rho.end() , std::ostream_iterator<std::string>(of,"\n") , dx_y );
-  of.close();
 
-  of.open( c.output_dir / "uc_vhll.dat" );
-  std::transform( uc.begin() , uc.end() , std::ostream_iterator<std::string>(of,"\n") , dx_y );
-  of.close();
+  c << monitoring::data( "rho_"+c.name+".dat" , rho , dx_y );
+  c << monitoring::data( "uc_"+c.name+".dat"  , uc  , dx_y );
 
   auto Jh = fh.courant();
-  ublas::vector<double> Jc (c.Nx,0.), Jtmp (c.Nx,0.);
+  ublas::vector<double> Jc (c.Nx,0.), Jtot (c.Nx,0.);
   for ( auto i=0 ; i<c.Nx ; ++i ) {
     Jc[i] = rhoc[i]*uc[i];
   }
-  Jtmp = Jc + Jh;
-  of.open( c.output_dir / "J_vhll.dat" );
-  std::transform( Jtmp.begin() , Jtmp.end() , std::ostream_iterator<std::string>(of,"\n") , dx_y );
-  of.close();
+  Jtot = Jc + Jh;
+  c << monitoring::data( "J_"+c.name+".dat" , Jtot , dx_y );
 
   return 0;
 }

@@ -257,6 +257,13 @@ class field
     }
 
     //// OTHER METHODS //////////////////////
+    void
+    compute_steps ()
+    {
+      step.dv = (range.v_max - range.v_min)/size(0);
+      step.dx = (range.x_max - range.x_min)/size_x();
+    }
+
     auto
     density () const
     {

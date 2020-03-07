@@ -78,7 +78,7 @@ struct spectrum_
   void
   fft ( Iterator it )
   {
-    fftw_plan p = fftw_plan_dft_r2c_1d(this->size(),it,(fftw_complex*)(&(this->operator[](0))),FFTW_ESTIMATE);
+    fftw_plan p = fftw_plan_dft_r2c_1d(this->size(),&(*it),(fftw_complex*)(&(this->operator[](0))),FFTW_ESTIMATE);
     fftw_execute(p); fftw_destroy_plan(p);
   }
 
@@ -86,7 +86,7 @@ struct spectrum_
   void
   ifft ( Iterator it )
   {
-    fftw_plan pI = fftw_plan_dft_c2r_1d(this->size(),(fftw_complex*)(&(this->operator[](0))),it,FFTW_ESTIMATE);
+    fftw_plan pI = fftw_plan_dft_c2r_1d(this->size(),(fftw_complex*)(&(this->operator[](0))),&(*it),FFTW_ESTIMATE);
     fftw_execute(pI); fftw_destroy_plan(pI);
     for ( std::size_t i=0 ; i<this->size() ; ++i,++it )
       { *it /= this->size(); }
@@ -98,7 +98,7 @@ void
 fft ( InputIt first , InputIt last , OutputIt d_it )
 {
   std::size_t size = std::distance(first,last);
-  fftw_plan p = fftw_plan_dft_r2c_1d( size , first , (fftw_complex*)(d_it) , FFTW_ESTIMATE);
+  fftw_plan p = fftw_plan_dft_r2c_1d( size , &(*first) , (fftw_complex*)(&(*d_it)) , FFTW_ESTIMATE);
   fftw_execute(p); fftw_destroy_plan(p);
 }
 
@@ -107,7 +107,7 @@ void
 ifft ( InputIt first , InputIt last , OutputIt d_it )
 {
   std::size_t size = std::distance(first,last);
-  fftw_plan pI = fftw_plan_dft_c2r_1d( size , (fftw_complex*)(first) , d_it , FFTW_ESTIMATE);
+  fftw_plan pI = fftw_plan_dft_c2r_1d( size , (fftw_complex*)(&(*first)) , &(*d_it) , FFTW_ESTIMATE);
   fftw_execute(pI); fftw_destroy_plan(pI);
   for ( std::size_t i=0 ; i<size ; ++i,++d_it )
     { *d_it /= size; }

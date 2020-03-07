@@ -27,25 +27,9 @@ convertor::operator () ( std::string && key , std::string && default_value )
   return std::move(default_value);
 }
 
-config::config ( std::filesystem::path p_config )
-{
-  convertor convert;
-
-  std::ifstream if_config(p_config);
-  std::string key,value;
-  while( if_config >> key >> value ) {
-    convert.map_config[key] = value;
-  }
-  if_config.close();
-
-  Nx = convert("Nx",135);
-  Nv = convert("Nv",128);
-  Tc = convert("Tc",0.01);
-  Tf = convert("Tf",10.0);
-  alpha = convert("alpha",0.2);
-  tol = convert("tol",1e-7);
-  output_dir = convert("output_dir",std::string{"."});
-}
+bool
+config::create_output_directory () const
+{ return std::filesystem::create_directories(output_dir); }
 
 std::ostream &
 operator << ( std::ostream & os , const config & c )
@@ -54,6 +38,7 @@ operator << ( std::ostream & os , const config & c )
      << "Nv " << c.Nv << "\n"
      << "Tc " << c.Tc << "\n"
      << "Tf " << c.Tf << "\n"
+     << "ui " << c.ui << "\n" 
      << "alpha " << c.alpha << "\n"
      << "tol " << c.tol << "\n"
      << "output_dir " << c.output_dir.string();

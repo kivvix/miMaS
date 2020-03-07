@@ -74,12 +74,16 @@ struct splitting
     _tmpf1(tools::array_view<const std::size_t>(fh.shape(),2)) ,
     _Nx(fh.shape()[1]) ,
     _Nv(fh.shape()[0]) ,
-    kx(fh.shape()[1])
+    kx(fh.shape()[1],0.)
   {
     _tmpf0.step = fh.step; _tmpf0.range = fh.range;
     _tmpf1.step = fh.step; _tmpf1.range = fh.range;
     //kx[0] = 1.;
+    /*
     for ( auto i=1 ; i<_Nx/2 ; ++i ) { kx[i] = 2.*math::pi<double>()*i/l; }
+    for ( int i=-_Nx/2 ; i<0 ; ++i ) { kx[_Nx+i] = 2.*math::pi<double>()*i/l; }
+    */
+    for ( auto i=0 ; i<_Nx/2 ; ++i ) { kx[i]     = 2.*math::pi<double>()*i/l; }
     for ( int i=-_Nx/2 ; i<0 ; ++i ) { kx[_Nx+i] = 2.*math::pi<double>()*i/l; }
   }
 
@@ -89,8 +93,32 @@ struct splitting
     // equivalent of hf of Nicolas
     const std::complex<double> & I = std::complex<double>(0.,1.);
 
+    // compute hdiffrho and update hfh
+    ublas::vector<std::complex<_T>> hdiffrho(_Nx,0.);
+    for ( auto k=0 ; k<_Nv ; ++k ) {
+      double vk = k*_dv + _v_min;
+      for ( auto i=0 ; i<_Nx ; ++i ) {
+        // hrho_n
+        hdiffrho[i] += hfh[k][i]*_dv;
+        // update hfh
+        hfh[k][i] *= std::exp(-I*vk*kx[i]*dt);
+        // hrho_{n+1}
+        hdiffrho[i] -= hfh[k][i]*_dv;
+      }
+    }
+
+    // update E
+    fft::spectrum_ hE(_Nx); hE.fft(E.begin());
+    hE[0] = 0.;
+    for ( auto i=1 ; i<_Nx ; ++i ) {
+      hE[i] += I/kx[i]*hdiffrho[i];
+    }
+    hE.ifft(E.begin());
+    
+
+    /*
     for ( auto k=0 ; k < _Nv ; ++k )
-      { fft::ifft( &(hfh[k][0]) , &(hfh[k][0])+_Nx , &(_tmpf0[k][0]) ); }
+      { fft::ifft( hfh[k].begin() , hfh[k].end() , _tmpf0[k].begin() ); }
     ublas::vector<_T> diffrho = _tmpf0.density();
 
     // update hfh
@@ -102,20 +130,19 @@ struct splitting
     }
 
     for ( auto k=0 ; k < _Nv ; ++k )
-      { fft::ifft( &(hfh[k][0]) , &(hfh[k][0])+_Nx , &(_tmpf0[k][0]) ); }
+      { fft::ifft( hfh[k].begin() , hfh[k].end() , _tmpf0[k].begin() ); }
     diffrho -= _tmpf0.density();
 
-    fft::spectrum_ hdiffrho(_Nx); hdiffrho.fft(&diffrho[0]);
+    fft::spectrum_ hdiffrho(_Nx); hdiffrho.fft(diffrho.begin());
 
     // update E
-    fft::spectrum_ hE(_Nx); hE.fft(&E[0]);
+    fft::spectrum_ hE(_Nx); hE.fft(E.begin());
     hE[0] = 0.;
     for ( auto i=1 ; i<_Nx ; ++i ) {
       hE[i] += I/kx[i]*hdiffrho[i];
     }
-    hE.ifft(&E[0]);
-
-    //return {uc,E,hfh};
+    hE.ifft(E.begin());
+    */
   }
 
   U_type
