@@ -1004,4 +1004,539 @@ namespace lawson {
 
 } // namespace lawson
 
+namespace expRK {
+
+  template <unsigned int i>
+  std::complex<double>
+  phi ( std::complex<double> const & _z )
+  {
+    std::valarray<std::complex<double>> coeff(i);
+    coeff[0] = 1.;
+
+    std::complex<double> z = _z;
+    if ( _z == 0. ) { z = std::complex<double>(1.,0.); }
+
+    for ( unsigned int k=1 ; k<coeff.size() ; ++k ) {
+      coeff[k] = coeff[k-1] * z / (double(k));
+    }
+    //std::copy(std::begin(coeff),std::end(coeff),std::ostream_iterator<std::complex<double>>(std::cout," . "));
+    //std::cout << std::endl;
+
+    if ( z != 0. ) {
+      return (std::exp(z) - std::accumulate( std::begin(coeff) , std::end(coeff) , std::complex<double>(0.,0.) ))/(std::pow(z,i));  
+    }
+    return coeff[i-1];
+  }
+
+  template < typename Poisson_Solver >
+  struct RK22 {
+    std::size_t Nx;
+    std::size_t Nv;
+    Poisson_Solver poisson_solver;
+    ublas::vector<double> E;
+    ublas::vector<double> vk;
+    ublas::vector<double> kx;
+    field<double,1> f1;
+    field<double,1> Edvf;
+    field<double,1> Edvf1;
+    fft::spectrum_ hfn;
+    fft::spectrum_ hf1;
+    fft::spectrum_ hEdvf;
+    fft::spectrum_ hEdvf1;
+    std::string label;
+
+    std::function<field<double,1>(field<double,1>const&,ublas::vector<double>const&)> L;
+
+    RK22 ( std::size_t N_x , std::size_t N_v , double l , const std::size_t * shape ,
+      ublas::vector<double> const& v_k , ublas::vector<double> const& k_x ,
+      std::function<field<double,1>(field<double,1>const&,ublas::vector<double>const&)> L_trp )
+    :
+      Nx(N_x) , Nv(N_v) , // size
+      poisson_solver(N_x,l) , // Poisson solver (could be identity for rotation)
+      E(N_x,0) , vk(v_k) , kx(k_x) ,
+      f1(tools::array_view<const std::size_t>(shape,2)) ,
+      Edvf(tools::array_view<const std::size_t>(shape,2)) ,
+      Edvf1(tools::array_view<const std::size_t>(shape,2)) ,
+      hfn(N_x) , hf1(N_x) , hEdvf(N_x) , hEdvf1(N_x) ,
+      L(L_trp)
+    { label = "expRK22"; }
+
+    field<double,1>
+    operator () ( field<double,1> & fn , double dt )
+    {
+      static const std::complex<double> & I = std::complex<double>(0.,1.);
+      
+      // first stage
+      E = poisson_solver(fn.density());
+      Edvf = L(fn,E);
+      for ( auto k=0 ; k<Nv ; ++k ) {
+        hfn.fft(fn[k].begin());
+        hEdvf.fft(Edvf[k].begin());
+
+        for ( auto i=0 ; i<Nx ; ++i ) {
+          std::complex<double> L = vk[k]*I*kx[i];
+          //hf1[i] = std::exp(-L*dt)*hfn[i] + dt*phi<1>(dt*L)*hEdvf[i];
+          hf1[i] = std::exp(-L*dt)*hfn[i] - dt*phi<1>(dt*L)*hEdvf[i];
+        }
+        hf1.ifft(f1[k].begin());
+      }
+
+      // second stage
+      E = poisson_solver(f1.density());
+      field<double,1> Edvf1 = L(f1,E);
+      for ( auto k=0 ; k<Nv ; ++k ) {
+        hfn.fft(fn[k].begin());
+        hf1.fft(f1[k].begin());
+        hEdvf.fft(Edvf[k].begin());
+        hEdvf1.fft(Edvf1[k].begin());
+
+        for ( auto i=0 ; i<Nx ; ++i ) {
+          std::complex<double> L = vk[k]*I*kx[i];
+          //hfn[i] = std::exp(-L*dt)*hfn[i] + dt*( (phi<1>(dt*L)-phi<2>(dt*L))*hEdvf[i] + phi<2>(dt*L)*hEdvf1[i] );
+          hfn[i] = std::exp(-L*dt)*hfn[i] - dt*( (phi<1>(dt*L)-phi<2>(dt*L))*hEdvf[i] + phi<2>(dt*L)*hEdvf1[i] );
+        }
+
+        hfn.ifft(fn[k].begin());
+      }
+
+      return fn;
+    }
+  };
+
+  template < typename Poisson_Solver >
+  struct CoxMatthews {
+    std::size_t Nx;
+    std::size_t Nv;
+    Poisson_Solver poisson_solver;
+    ublas::vector<double> E;
+    ublas::vector<double> vk;
+    ublas::vector<double> kx;
+    field<double,1> f1;
+    field<double,1> f2;
+    field<double,1> f3;
+    field<double,1> Edvf;
+    field<double,1> Edvf1;
+    field<double,1> Edvf2;
+    field<double,1> Edvf3;
+    fft::spectrum_ hfn;
+    fft::spectrum_ hf1;
+    fft::spectrum_ hf2;
+    fft::spectrum_ hf3;
+    fft::spectrum_ hEdvf;
+    fft::spectrum_ hEdvf1;
+    fft::spectrum_ hEdvf2;
+    fft::spectrum_ hEdvf3;
+    std::string label;
+
+    std::function<field<double,1>(field<double,1>const&,ublas::vector<double>const&)> L;
+
+    CoxMatthews ( std::size_t N_x , std::size_t N_v , double l , const std::size_t * shape ,
+      ublas::vector<double> const& v_k , ublas::vector<double> const& k_x ,
+      std::function<field<double,1>(field<double,1>const&,ublas::vector<double>const&)> L_trp )
+    :
+      Nx(N_x) , Nv(N_v) , // size
+      poisson_solver(N_x,l) , // Poisson solver (could be identity for rotation)
+      E(N_x,0) , vk(v_k) , kx(k_x) ,
+      f1(tools::array_view<const std::size_t>(shape,2)) ,
+      f2(tools::array_view<const std::size_t>(shape,2)) ,
+      f3(tools::array_view<const std::size_t>(shape,2)) ,
+      Edvf(tools::array_view<const std::size_t>(shape,2)) ,
+      Edvf1(tools::array_view<const std::size_t>(shape,2)) ,
+      Edvf2(tools::array_view<const std::size_t>(shape,2)) ,
+      Edvf3(tools::array_view<const std::size_t>(shape,2)) ,
+      hfn(N_x) , hf1(N_x) , hf2(N_x) , hf3(N_x) ,
+      hEdvf(N_x) , hEdvf1(N_x) , hEdvf2(N_x) , hEdvf3(N_x) ,
+      L(L_trp)
+    { label = "Cox-Matthews"; }
+
+    field<double,1>
+    operator () ( field<double,1> & fn , double dt )
+    {
+      static const std::complex<double> & I = std::complex<double>(0.,1.);
+      
+      // first stage
+      E = poisson_solver(fn.density());
+      Edvf = L(fn,E);
+      for ( auto k=0 ; k<Nv ; ++k ) {
+        hfn.fft(fn[k].begin());
+        hEdvf.fft(Edvf[k].begin());
+
+        for ( auto i=0 ; i<Nx ; ++i ) {
+          std::complex<double> L = vk[k]*I*kx[i];
+          //hf1[i] = std::exp(-0.5*L*dt)*hfn[i] + 0.5*dt*phi<1>(-0.5*L*dt)*hEdvf[i];
+          hf1[i] = std::exp(-0.5*L*dt)*hfn[i] - 0.5*dt*phi<1>(-0.5*L*dt)*hEdvf[i];
+        }
+        hf1.ifft(f1[k].begin());
+      }
+
+      // second stage
+      E = poisson_solver(f1.density());
+      Edvf1 = L(f1,E);
+      for ( auto k=0 ; k<Nv ; ++k ) {
+        hfn.fft(fn[k].begin());
+        hf1.fft(f1[k].begin());
+        hEdvf.fft(Edvf[k].begin());
+        hEdvf1.fft(Edvf1[k].begin());
+
+        for ( auto i=0 ; i<Nx ; ++i ) {
+          std::complex<double> L = vk[k]*I*kx[i];
+          //hf2[i] = std::exp(-0.5*L*dt)*hfn[i] + 0.5*dt*phi<1>(-0.5*L*dt)*hEdvf1[i];
+          hf2[i] = std::exp(-0.5*L*dt)*hfn[i] - 0.5*dt*phi<1>(-0.5*L*dt)*hEdvf1[i];
+        }
+
+        hf2.ifft(f2[k].begin());
+      }
+
+      // thrid stage
+      E = poisson_solver( f2.density() );
+      Edvf2 = L(f2,E);
+      for ( auto k=0 ; k<Nv ; ++k ) {
+        hfn.fft(fn[k].begin());
+        hf1.fft(f1[k].begin());
+        hf2.fft(f2[k].begin());
+        hEdvf.fft(Edvf[k].begin());
+        hEdvf1.fft(Edvf1[k].begin());
+        hEdvf2.fft(Edvf2[k].begin());
+
+        for ( auto i=0 ; i<Nx ; ++i ) {
+          std::complex<double> L = vk[k]*I*kx[i];
+          //hf3[i] = std::exp(-L*dt)*hfn[i] + 0.5*dt*phi<1>(-0.5*L*dt)*(std::exp(-0.5*L*dt)-1.)*hEdvf[i] + dt*phi<1>(-0.5*L*dt)*hEdvf2[i];
+          hf3[i] = std::exp(-L*dt)*hfn[i] - 0.5*dt*phi<1>(-0.5*L*dt)*(std::exp(-0.5*L*dt)-1.)*hEdvf[i] - dt*phi<1>(-0.5*L*dt)*hEdvf2[i];
+        }
+
+        hf3.ifft(f3[k].begin());
+      }
+
+      // fourth stage
+      E = poisson_solver( f3.density() );
+      Edvf3 = L(f3,E);
+      for ( auto k=0 ; k<Nv ; ++k ) {
+        hfn.fft(fn[k].begin());
+        hf1.fft(f1[k].begin());
+        hf2.fft(f2[k].begin());
+        hf3.fft(f3[k].begin());
+        hEdvf.fft(Edvf[k].begin());
+        hEdvf1.fft(Edvf1[k].begin());
+        hEdvf2.fft(Edvf2[k].begin());
+        hEdvf3.fft(Edvf3[k].begin());
+
+        for ( auto i=0 ; i<Nx ; ++i ) {
+          std::complex<double> L = vk[k]*I*kx[i];
+          //hfn[i] = std::exp(-L*dt)*hfn[i] + dt*( (phi<1>(-L*dt)-3.*phi<2>(-L*dt)+4.*phi<3>(-L*dt))*hEdvf[i]
+          //                                + (2.*phi<2>(-L*dt)-4.*phi<3>(-L*dt))*(hEdvf1[i]+hEdvf2[i])
+          //                                + (-phi<2>(-L*dt)+4.*phi<3>(-L*dt))*hEdvf3[i] );
+          hfn[i] = std::exp(-L*dt)*hfn[i] - dt*( (phi<1>(-L*dt)-3.*phi<2>(-L*dt)+4.*phi<3>(-L*dt))*hEdvf[i]
+                                          + (2.*phi<2>(-L*dt)-4.*phi<3>(-L*dt))*(hEdvf1[i]+hEdvf2[i])
+                                          + (-phi<2>(-L*dt)+4.*phi<3>(-L*dt))*hEdvf3[i] );
+        }
+
+        hfn.ifft(fn[k].begin());
+      }
+
+      return fn;
+    }
+  };
+
+  template < typename Poisson_Solver >
+  struct Krogstad {
+    std::size_t Nx;
+    std::size_t Nv;
+    Poisson_Solver poisson_solver;
+    ublas::vector<double> E;
+    ublas::vector<double> vk;
+    ublas::vector<double> kx;
+    field<double,1> f1;
+    field<double,1> f2;
+    field<double,1> f3;
+    field<double,1> Edvf;
+    field<double,1> Edvf1;
+    field<double,1> Edvf2;
+    field<double,1> Edvf3;
+    fft::spectrum_ hfn;
+    fft::spectrum_ hf1;
+    fft::spectrum_ hf2;
+    fft::spectrum_ hf3;
+    fft::spectrum_ hEdvf;
+    fft::spectrum_ hEdvf1;
+    fft::spectrum_ hEdvf2;
+    fft::spectrum_ hEdvf3;
+    std::string label;
+
+    std::function<field<double,1>(field<double,1>const&,ublas::vector<double>const&)> L;
+
+    Krogstad ( std::size_t N_x , std::size_t N_v , double l , const std::size_t * shape ,
+      ublas::vector<double> const& v_k , ublas::vector<double> const& k_x ,
+      std::function<field<double,1>(field<double,1>const&,ublas::vector<double>const&)> L_trp )
+    :
+      Nx(N_x) , Nv(N_v) , // size
+      poisson_solver(N_x,l) , // Poisson solver (could be identity for rotation)
+      E(N_x,0) , vk(v_k) , kx(k_x) ,
+      f1(tools::array_view<const std::size_t>(shape,2)) ,
+      f2(tools::array_view<const std::size_t>(shape,2)) ,
+      f3(tools::array_view<const std::size_t>(shape,2)) ,
+      Edvf(tools::array_view<const std::size_t>(shape,2)) ,
+      Edvf1(tools::array_view<const std::size_t>(shape,2)) ,
+      Edvf2(tools::array_view<const std::size_t>(shape,2)) ,
+      Edvf3(tools::array_view<const std::size_t>(shape,2)) ,
+      hfn(N_x) , hf1(N_x) , hf2(N_x) , hf3(N_x) ,
+      hEdvf(N_x) , hEdvf1(N_x) , hEdvf2(N_x) , hEdvf3(N_x) ,
+      L(L_trp)
+    { label = "Krogstad"; }
+
+    field<double,1>
+    operator () ( field<double,1> & fn , double dt )
+    {
+      static const std::complex<double> & I = std::complex<double>(0.,1.);
+      
+      // first stage
+      E = poisson_solver(fn.density());
+      Edvf = L(fn,E);
+      for ( auto k=0 ; k<Nv ; ++k ) {
+        hfn.fft(fn[k].begin());
+        hEdvf.fft(Edvf[k].begin());
+
+        for ( auto i=0 ; i<Nx ; ++i ) {
+          std::complex<double> L = vk[k]*I*kx[i];
+          //hf1[i] = std::exp(-0.5*L*dt)*hfn[i] + 0.5*dt*phi<1>(-0.5*L*dt)*hEdvf[i];
+          hf1[i] = std::exp(-0.5*L*dt)*hfn[i] - 0.5*dt*phi<1>(-0.5*L*dt)*hEdvf[i];
+        }
+        hf1.ifft(f1[k].begin());
+      }
+
+      // second stage
+      E = poisson_solver(f1.density());
+      Edvf1 = L(f1,E);
+      for ( auto k=0 ; k<Nv ; ++k ) {
+        hfn.fft(fn[k].begin());
+        hf1.fft(f1[k].begin());
+        hEdvf.fft(Edvf[k].begin());
+        hEdvf1.fft(Edvf1[k].begin());
+
+        for ( auto i=0 ; i<Nx ; ++i ) {
+          std::complex<double> L = vk[k]*I*kx[i];
+          //hf2[i] = std::exp(-0.5*L*dt)*hfn[i] + dt*(0.5*phi<1>(-0.5*L*dt)-phi<2>(-0.5*L*dt))*hEdvf[i] + dt*phi<2>(-0.5*L*dt)*hEdvf1[i];
+          hf2[i] = std::exp(-0.5*L*dt)*hfn[i] - dt*(0.5*phi<1>(-0.5*L*dt)-phi<2>(-0.5*L*dt))*hEdvf[i] - dt*phi<2>(-0.5*L*dt)*hEdvf1[i];
+        }
+
+        hf2.ifft(f2[k].begin());
+      }
+
+      // thrid stage
+      E = poisson_solver( f2.density() );
+      Edvf2 = L(f2,E);
+      for ( auto k=0 ; k<Nv ; ++k ) {
+        hfn.fft(fn[k].begin());
+        hf1.fft(f1[k].begin());
+        hf2.fft(f2[k].begin());
+        hEdvf.fft(Edvf[k].begin());
+        hEdvf1.fft(Edvf1[k].begin());
+        hEdvf2.fft(Edvf2[k].begin());
+
+        for ( auto i=0 ; i<Nx ; ++i ) {
+          std::complex<double> L = vk[k]*I*kx[i];
+          //hf3[i] = std::exp(-L*dt)*hfn[i] + dt*(phi<1>(-L*dt)-2.*phi<2>(-0.5*L*dt))*hEdvf[i] + 2.*dt*phi<2>(-L*dt)*hEdvf2[i];
+          hf3[i] = std::exp(-L*dt)*hfn[i] - dt*(phi<1>(-L*dt)-2.*phi<2>(-0.5*L*dt))*hEdvf[i] - 2.*dt*phi<2>(-L*dt)*hEdvf2[i];
+        }
+
+        hf3.ifft(f3[k].begin());
+      }
+
+      // fourth stage
+      E = poisson_solver( f3.density() );
+      Edvf3 = L(f3,E);
+      for ( auto k=0 ; k<Nv ; ++k ) {
+        hfn.fft(fn[k].begin());
+        hf1.fft(f1[k].begin());
+        hf2.fft(f2[k].begin());
+        hf3.fft(f3[k].begin());
+        hEdvf.fft(Edvf[k].begin());
+        hEdvf1.fft(Edvf1[k].begin());
+        hEdvf2.fft(Edvf2[k].begin());
+        hEdvf3.fft(Edvf3[k].begin());
+
+        for ( auto i=0 ; i<Nx ; ++i ) {
+          std::complex<double> L = vk[k]*I*kx[i];
+          //hfn[i] = std::exp(-L*dt)*hfn[i] + dt*( (phi<1>(-L*dt)-3.*phi<2>(-L*dt)+4.*phi<3>(-L*dt))*hEdvf[i]
+          //                                + (2.*phi<2>(-L*dt)-4.*phi<3>(-L*dt))*(hEdvf1[i]+hEdvf2[i])
+          //                                + (-phi<2>(-L*dt)+4.*phi<3>(-L*dt))*hEdvf3[i] );
+          hfn[i] = std::exp(-L*dt)*hfn[i] - dt*( (phi<1>(-L*dt)-3.*phi<2>(-L*dt)+4.*phi<3>(-L*dt))*hEdvf[i]
+                                          + (2.*phi<2>(-L*dt)-4.*phi<3>(-L*dt))*(hEdvf1[i]+hEdvf2[i])
+                                          + (-phi<2>(-L*dt)+4.*phi<3>(-L*dt))*hEdvf3[i] );
+        }
+
+        hfn.ifft(fn[k].begin());
+      }
+
+      return fn;
+    }
+  };
+
+  template < typename Poisson_Solver >
+  struct HochbruckOstermann {
+    std::size_t Nx;
+    std::size_t Nv;
+    Poisson_Solver poisson_solver;
+    ublas::vector<double> E;
+    ublas::vector<double> vk;
+    ublas::vector<double> kx;
+    field<double,1> f1;
+    field<double,1> f2;
+    field<double,1> f3;
+    field<double,1> f4;
+    field<double,1> Edvf;
+    field<double,1> Edvf1;
+    field<double,1> Edvf2;
+    field<double,1> Edvf3;
+    field<double,1> Edvf4;
+    fft::spectrum_ hfn;
+    fft::spectrum_ hf1;
+    fft::spectrum_ hf2;
+    fft::spectrum_ hf3;
+    fft::spectrum_ hf4;
+    fft::spectrum_ hEdvf;
+    fft::spectrum_ hEdvf1;
+    fft::spectrum_ hEdvf2;
+    fft::spectrum_ hEdvf3;
+    fft::spectrum_ hEdvf4;
+    std::string label;
+
+    std::function<field<double,1>(field<double,1>const&,ublas::vector<double>const&)> L;
+
+    HochbruckOstermann ( std::size_t N_x , std::size_t N_v , double l , const std::size_t * shape ,
+      ublas::vector<double> const& v_k , ublas::vector<double> const& k_x ,
+      std::function<field<double,1>(field<double,1>const&,ublas::vector<double>const&)> L_trp )
+    :
+      Nx(N_x) , Nv(N_v) , // size
+      poisson_solver(N_x,l) , // Poisson solver (could be identity for rotation)
+      E(N_x,0) , vk(v_k) , kx(k_x) ,
+      f1(tools::array_view<const std::size_t>(shape,2)) ,
+      f2(tools::array_view<const std::size_t>(shape,2)) ,
+      f3(tools::array_view<const std::size_t>(shape,2)) ,
+      f4(tools::array_view<const std::size_t>(shape,2)) ,
+      Edvf(tools::array_view<const std::size_t>(shape,2)) ,
+      Edvf1(tools::array_view<const std::size_t>(shape,2)) ,
+      Edvf2(tools::array_view<const std::size_t>(shape,2)) ,
+      Edvf3(tools::array_view<const std::size_t>(shape,2)) ,
+      Edvf4(tools::array_view<const std::size_t>(shape,2)) ,
+      hfn(N_x) , hf1(N_x) , hf2(N_x) , hf3(N_x) , hf4(N_x) ,
+      hEdvf(N_x) , hEdvf1(N_x) , hEdvf2(N_x) , hEdvf3(N_x) , hEdvf4(N_x) ,
+      L(L_trp)
+    { label = "Hochbruck-Ostermann"; }
+
+    field<double,1>
+    operator () ( field<double,1> & fn , double dt )
+    {
+      static const std::complex<double> & I = std::complex<double>(0.,1.);
+      
+      // first stage
+      E = poisson_solver(fn.density());
+      Edvf = L(fn,E);
+      for ( auto k=0 ; k<Nv ; ++k ) {
+        hfn.fft(fn[k].begin());
+        hEdvf.fft(Edvf[k].begin());
+
+        for ( auto i=0 ; i<Nx ; ++i ) {
+          std::complex<double> L = vk[k]*I*kx[i];
+          //hf1[i] = std::exp(-0.5*L*dt)*hfn[i] + 0.5*dt*phi<1>(-0.5*L*dt)*hEdvf[i];
+          hf1[i] = std::exp(-0.5*L*dt)*hfn[i] - 0.5*dt*phi<1>(-0.5*L*dt)*hEdvf[i];
+        }
+        hf1.ifft(f1[k].begin());
+      }
+
+      // second stage
+      E = poisson_solver(f1.density());
+      Edvf1 = L(f1,E);
+      for ( auto k=0 ; k<Nv ; ++k ) {
+        hfn.fft(fn[k].begin());
+        hf1.fft(f1[k].begin());
+        hEdvf.fft(Edvf[k].begin());
+        hEdvf1.fft(Edvf1[k].begin());
+
+        for ( auto i=0 ; i<Nx ; ++i ) {
+          std::complex<double> L = vk[k]*I*kx[i];
+          //hf2[i] = std::exp(-0.5*L*dt)*hfn[i] + dt*(0.5*phi<1>(-0.5*L*dt)-phi<2>(-0.5*L*dt))*hEdvf[i] + dt*phi<2>(-0.5*L*dt)*hEdvf1[i];
+          hf2[i] = std::exp(-0.5*L*dt)*hfn[i] - dt*(0.5*phi<1>(-0.5*L*dt)-phi<2>(-0.5*L*dt))*hEdvf[i] - dt*phi<2>(-0.5*L*dt)*hEdvf1[i];
+        }
+
+        hf2.ifft(f2[k].begin());
+      }
+
+      // thrid stage
+      E = poisson_solver( f2.density() );
+      Edvf2 = L(f2,E);
+      for ( auto k=0 ; k<Nv ; ++k ) {
+        hfn.fft(fn[k].begin());
+        hf1.fft(f1[k].begin());
+        hf2.fft(f2[k].begin());
+        hEdvf.fft(Edvf[k].begin());
+        hEdvf1.fft(Edvf1[k].begin());
+        hEdvf2.fft(Edvf2[k].begin());
+
+        for ( auto i=0 ; i<Nx ; ++i ) {
+          std::complex<double> L = vk[k]*I*kx[i];
+          //hf3[i] = std::exp(-L*dt)*hfn[i] + dt*(phi<1>(-L*dt)-2.*phi<2>(-L*dt))*hEdvf[i] + dt*phi<2>(-L*dt)*hEdvf1[i] + dt*phi<2>(-L*dt)*hEdvf2[i];
+          hf3[i] = std::exp(-L*dt)*hfn[i] - dt*(phi<1>(-L*dt)-2.*phi<2>(-L*dt))*hEdvf[i] - dt*phi<2>(-L*dt)*hEdvf1[i] - dt*phi<2>(-L*dt)*hEdvf2[i];
+        }
+
+        hf3.ifft(f3[k].begin());
+      }
+
+      // fourth stage
+      E = poisson_solver( f3.density() );
+      Edvf3 = L(f3,E);
+      for ( auto k=0 ; k<Nv ; ++k ) {
+        hfn.fft(fn[k].begin());
+        hf1.fft(f1[k].begin());
+        hf2.fft(f2[k].begin());
+        hf3.fft(f3[k].begin());
+        hEdvf.fft(Edvf[k].begin());
+        hEdvf1.fft(Edvf1[k].begin());
+        hEdvf2.fft(Edvf2[k].begin());
+        hEdvf3.fft(Edvf3[k].begin());
+
+        for ( auto i=0 ; i<Nx ; ++i ) {
+          std::complex<double> L = vk[k]*I*kx[i];
+          std::complex<double> a52 = (0.5*phi<2>(-0.5*L*dt)-phi<3>(-L*dt)+0.25*phi<2>(-L*dt)-0.5*phi<3>(-0.5*L*dt));
+          std::complex<double> a54 = (0.25*phi<2>(-0.5*L*dt)-a52);
+          //hf4[i] = std::exp(-0.5*L*dt)*hfn[i] + dt*(0.5*phi<1>(-0.5*L*dt)-2.*a52-a54)*hEdvf[i] + dt*a52*(hEdvf1[i]+hEdvf2[i]) + dt*(0.25*phi<2>(-0.5*L*dt)-a52)*hEdvf3[i];
+          hf4[i] = std::exp(-0.5*L*dt)*hfn[i] - dt*(0.5*phi<1>(-0.5*L*dt)-2.*a52-a54)*hEdvf[i] - dt*a52*(hEdvf1[i]+hEdvf2[i]) - dt*(0.25*phi<2>(-0.5*L*dt)-a52)*hEdvf3[i];
+        }
+
+        hf4.ifft(f4[k].begin());
+      }
+
+      // fifth stage
+      E = poisson_solver( f4.density() );
+      Edvf4 = L(f4,E);
+      for ( auto k=0 ; k<Nv ; ++k ) {
+        hfn.fft(fn[k].begin());
+        hf1.fft(f1[k].begin());
+        hf2.fft(f2[k].begin());
+        hf3.fft(f3[k].begin());
+        hf4.fft(f4[k].begin());
+        hEdvf.fft(Edvf[k].begin());
+        hEdvf1.fft(Edvf1[k].begin());
+        hEdvf2.fft(Edvf2[k].begin());
+        hEdvf3.fft(Edvf3[k].begin());
+        hEdvf4.fft(Edvf4[k].begin());
+
+        for ( auto i=0 ; i<Nx ; ++i ) {
+          std::complex<double> L = vk[k]*I*kx[i];
+          //hfn[i] = std::exp(-L*dt)*hfn[i] + dt*( (phi<1>(-L*dt)-3.*phi<2>(-L*dt)+4.*phi<3>(-L*dt))*hEdvf[i]
+          //                                + (-phi<2>(-L*dt)+4.*phi<3>(-L*dt))*hEdvf3[i]
+          //                                + (4.*phi<2>(-L*dt)-8.*phi<3>(-L*dt))*hEdvf4[i] );
+          hfn[i] = std::exp(-L*dt)*hfn[i] - dt*( (phi<1>(-L*dt)-3.*phi<2>(-L*dt)+4.*phi<3>(-L*dt))*hEdvf[i]
+                                          + (-phi<2>(-L*dt)+4.*phi<3>(-L*dt))*hEdvf3[i]
+                                          + (4.*phi<2>(-L*dt)-8.*phi<3>(-L*dt))*hEdvf4[i] );
+        }
+
+        hfn.ifft(fn[k].begin());
+      }
+
+      return fn;
+    }
+  };
+
+} // namespace expRK
+
 #endif

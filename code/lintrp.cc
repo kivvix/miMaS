@@ -101,7 +101,7 @@ main ( int argc , char const * argv[] )
   if ( argc > 1 )
     { p = argv[1]; }
   auto c = config(p);
-  c.name = "trp";
+  c.name = "cm_e10m3";
 
   c.create_output_directory();
   std::ofstream ofconfig( c.output_dir / "config.init" );
@@ -111,6 +111,11 @@ main ( int argc , char const * argv[] )
 /* ------------------------------------------------------------------------- */
   field<double,1> f(boost::extents[c.Nv][c.Nx]);
   field<double,1> f_sol(boost::extents[c.Nv][c.Nx]);
+
+  complex_field<double,1> hf(boost::extents[c.Nv][c.Nx]);
+  fft::spectrum_ d(c.Nx);
+
+  std::vector<double> mass;
 
   const double Kx = 0.5;
   f.range.v_min = -3.; f.range.v_max = 3.;
@@ -131,15 +136,22 @@ main ( int argc , char const * argv[] )
 
   auto c0 = disque(0.,0.,1.);
   auto d0 = test2(-1.,1.,1./f.range.len_x());
+
+  double m=0;
   for (field<double,2>::size_type k=0 ; k<f.size(0) ; ++k ) {
     for (field<double,2>::size_type i=0 ; i<f.size(1) ; ++i ) {
-      //f[k][i] = c0(Xi(i),Vk(k));
-      //f_sol[k][i] = c0(Xi(i)-c.Tf,Vk(k)-c.Tf);
+      f[k][i] = c0(Xi(i),Vk(k));
+      f_sol[k][i] = c0(Xi(i)-c.Tf,Vk(k)-c.Tf);
 
-      f[k][i] = d0(Xi(i),Vk(k));
-      f_sol[k][i] = d0(Xi(i)-c.Tf,Vk(k)-c.Tf);
+      m += f[k][i]*f.step.dx*f.step.dv;
+      //f[k][i] = d0(Xi(i),Vk(k));
+      //f_sol[k][i] = d0(Xi(i)-c.Tf,Vk(k)-c.Tf);
     }
   }
+  std::cout << m << std::endl;
+  //d.fft(f[int(c.Nv/2.)].begin());
+  //std::copy( d.begin() , d.end() , std::ostream_iterator<std::complex<double>>(std::cout," "));
+
   f.write( c.output_dir / ("init_"+c.name+".dat") );
   f_sol.write( c.output_dir / ("sol_"+c.name+".dat") );
 
@@ -148,7 +160,15 @@ main ( int argc , char const * argv[] )
   iter.current_time = 0.;
   //iter.dt = 0.050*f.step.dv;
   //iter.dt = 2.*std::sqrt(2.)*f.step.dv;
-  iter.dt = 0.02;//1.73*f.step.dv;
+  iter.dt = 0.150*f.step.dv;
+
+  std::vector<double> normL2; normL2.reserve(100);
+  auto L2 = [&]( field<double,1>const& f )->double {
+    return std::pow(
+            std::accumulate( f.origin() , f.origin()+f.num_elements() , 0. ,
+              []( double s , double fik )->double { return s + fik*fik; }
+          ),2)*f.step.dx*f.step.dv;
+  };
 
   // space scheme
   auto wenol = [&](field<double,1>const& f , ublas::vector<double> const& E )->field<double,1> { return wenolin::trp_v(f,E); };
@@ -156,22 +176,28 @@ main ( int argc , char const * argv[] )
   auto cd2   = [&](field<double,1>const& f , ublas::vector<double> const& E )->field<double,1> { return o2::trp_v(f,E); };
 
   // time scheme init
-  //expRK::HochbruckOstermann<surimi> rk(c.Nx,c.Nv,f.range.len_x(),f.shape(),v,kx,cd2);
-  lawson::RK44<surimi> rk(c.Nx,c.Nv,f.range.len_x(),f.shape(),v,kx,weno);
+  //expRK::HochbruckOstermann<surimi> rk(c.Nx,c.Nv,f.range.len_x(),f.shape(),v,kx,cd2); // 0.250 , 0.501 , 1.702
+  expRK::CoxMatthews<surimi> rk(c.Nx,c.Nv,f.range.len_x(),f.shape(),v,kx,cd2); // 0.150 , 0.450 , 1.351
+  //expRK::RK22<surimi> rk(c.Nx,c.Nv,f.range.len_x(),f.shape(),v,kx,cd2);
+  //lawson::RK33<surimi> rk(c.Nx,c.Nv,f.range.len_x(),f.shape(),v,kx,weno);
 
-  while (  iter.current_time < c.Tf ) {
+  //while (  iter.current_time < c.Tf ) {
+  while ( iter.iter < 101 ) {
     std::cout << "\r" << iteration::time(iter) << std::flush;
 
+    normL2.push_back(L2(f));
     f = rk(f,iter.dt);
 
+
     ++iter.iter;
-    if ( iter.current_time + iter.dt > c.Tf ) { iter.dt = c.Tf-iter.current_time; }
+    //if ( iter.current_time + iter.dt > c.Tf ) { iter.dt = c.Tf-iter.current_time; }
     iter.current_time += iter.dt;
   }
   std::cout << "\r" << time(iter) << std::endl;
 
   f.write( c.output_dir / ("vp_"+c.name+".dat") );
 
+  /*
   field<double,1> f_diff(boost::extents[c.Nv][c.Nx]);
   f_diff.range = f.range;
   for (field<double,2>::size_type k=0 ; k<f.size(0) ; ++k ) {
@@ -180,6 +206,18 @@ main ( int argc , char const * argv[] )
     }
   }
   f_diff.write( c.output_dir / ("diff_"+c.name+".dat") );
+  */
+
+  std::ofstream of( c.output_dir / ("normL2"+c.name+".dat") );
+  std::transform(
+    normL2.begin() , normL2.end() ,
+    std::ostream_iterator<std::string>(of,"\n") ,
+    [&,count=0](double x) mutable {
+      std::stringstream ss; ss << count << " " << iter.dt*(count++) << " " << x;
+      return ss.str();
+    }
+  );
+  of.close();
 
   return 0;
 }

@@ -1,7 +1,7 @@
 #include <csignal>
 #include <functional>
 
-namespace signals_handler {
+namespace signal_handler {
 
 /*
 template <int SIGNAL>
@@ -50,7 +50,7 @@ template <int SIGNAL>
 std::function<void(int)> signal_handler_one<SIGNAL>::function_handler;
 
 template <int ...SIGNAL>
-struct signals_handler {
+struct signal_handler {
   template < typename FUNC >
   static void
   handler ( FUNC function_handler )

@@ -21,17 +21,19 @@ def compute_Nv(Tc):
   return math.floor(16.0/(math.sqrt(Tc)/20.0))
 def compute_alpha(Tc):
   import math
-  return 1. - Tcrhoc/Tc
+  #return 1. - Tcrhoc/Tc
+  return 0.2
+
 def dic_init(Tc,d):
   return {'Tc':Tc,'Nv':compute_Nv(Tc),'Nx':135,'alpha':compute_alpha(Tc),'Tf':10.0,'output_dir':d}
 
 configs = [
-  simu_config(**dic_init(0.08 ,"compare/alpha/tm0p08"))  ,
-  simu_config(**dic_init(0.1  ,"compare/alpha/tm0p1"))   ,
-  simu_config(**dic_init(0.125,"compare/alpha/tm0p125")) ,
-  simu_config(**dic_init(0.15 ,"compare/alpha/tm0p15"))  ,
-  simu_config(**dic_init(0.175,"compare/alpha/tm0p175")) ,
-  simu_config(**dic_init(0.2  ,"compare/alpha/tm0p2"))
+  simu_config(**dic_init(0.08 ,"compare/alpha2/tm0p08"))  ,
+  simu_config(**dic_init(0.1  ,"compare/alpha2/tm0p1"))   ,
+  simu_config(**dic_init(0.125,"compare/alpha2/tm0p125")) ,
+  simu_config(**dic_init(0.15 ,"compare/alpha2/tm0p15"))  ,
+  simu_config(**dic_init(0.175,"compare/alpha2/tm0p175")) ,
+  simu_config(**dic_init(0.2  ,"compare/alpha2/tm0p2"))
 ]
 
 """
@@ -47,3 +49,4 @@ for c in reversed(configs) :
   c.write("config.init")
   subprocess.run("./cmp_tb.out   config.init".split(),shell=True,check=True)
   subprocess.run("./cmp_vhll.out config.init".split(),shell=True,check=True)
+

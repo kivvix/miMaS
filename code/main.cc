@@ -96,7 +96,7 @@ const std::complex<double> & I = std::complex<double>(0.,1.);
 
 int main(int,char**)
 {
-	std::size_t Nx = 135, Nv = 1024 , Nb_iter=10;
+	std::size_t Nx = 135, Nv = 256 , Nb_iter=10;
 	field<double,1> f(boost::extents[Nv][Nx]);
 
 	f.range.v_min = -8.; f.range.v_max = 8.;
@@ -138,7 +138,7 @@ int main(int,char**)
       //f[k][i] = ( std::exp(-0.5*SQ(Vk(k)))*np/std::sqrt(2.*math::pi<double>()) + nb/std::sqrt(2.*math::pi<double>())*std::exp(-0.5*SQ(Vk(k)-ui)/0.25) )*(1.+0.04*std::cos(0.5*Xi(i)));
       
       // Bump on Tail
-      //f[k][i] = ( std::exp(-0.5*SQ(Vk(k)))*np/std::sqrt(2.*math::pi<double>()) + nb/std::sqrt(2.*math::pi<double>())*std::exp(-0.5*SQ(Vk(k)-ui)/0.25) )*(1.+0.04*std::cos(0.3*Xi(i)));
+      f[k][i] = ( std::exp(-0.5*SQ(Vk(k)))*np/std::sqrt(2.*math::pi<double>()) + nb/std::sqrt(2.*math::pi<double>())*std::exp(-0.5*SQ(Vk(k)-ui)/0.25) )*(1.+0.04*std::cos(0.3*Xi(i)));
       // Landau dumpping test
       //f[k][i] = (1./std::sqrt(2*math::pi<double>()))*std::exp(-0.5*SQ(Vk(k)))*(1.+0.001*std::cos(0.5*Xi(i)));
       
@@ -150,7 +150,7 @@ int main(int,char**)
       //f_sol[k][i] =  std::exp(-SQ(Xi(i)-3.-v[k]*Nb_iter*dt)/0.5 - SQ(Vk(k)-E[i]*Nb_iter*dt)/2.);
 
       // triple bump
-      f[k][i] = ( 0.5*alpha/std::sqrt(2.*math::pi<double>())*std::exp(-0.5*SQ(Vk(k)-ui)) + 0.5*alpha/std::sqrt(2.*math::pi<double>())*std::exp(-0.5*SQ(Vk(k)+ui)) )*(1.+0.04*std::cos(Kx*Xi(i))) + ((1-alpha)/(std::sqrt(2.*math::pi<double>()*Tc))*std::exp(-0.5*SQ(Vk(k))/Tc));
+      //f[k][i] = ( 0.5*alpha/std::sqrt(2.*math::pi<double>())*std::exp(-0.5*SQ(Vk(k)-ui)) + 0.5*alpha/std::sqrt(2.*math::pi<double>())*std::exp(-0.5*SQ(Vk(k)+ui)) )*(1.+0.04*std::cos(Kx*Xi(i))) + ((1-alpha)/(std::sqrt(2.*math::pi<double>()*Tc))*std::exp(-0.5*SQ(Vk(k))/Tc));
     }
   }
   f.write("vphl/kin/init.dat");

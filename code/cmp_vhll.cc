@@ -173,7 +173,7 @@ main(int argc, char const *argv[])
 
   };
 
-  signals_handler::signals_handler<SIGINT,SIGILL>::handler( [&]( int signal ) -> void {
+  signal_handler::signal_handler<SIGINT,SIGILL>::handler( [&]( int signal ) -> void {
     std::cerr << "\n\033[41;97m ** End of execution after signal " << signal << " ** \033[0m\n";
     std::cerr << "\033[36msave data...\033[0m\n";
 
@@ -427,6 +427,7 @@ main(int argc, char const *argv[])
       }
     } // end stage 4
 
+/*
     // STAGE 5
     {
       for ( auto k=0 ; k<hfh.shape()[0] ; ++k ) { fft::ifft(hfh4[k].begin(),hfh4[k].end(),fh[k].begin()); }
@@ -446,6 +447,7 @@ main(int argc, char const *argv[])
         }
       }
     } // end stage 5
+*/
 
 /////////////////////////////////////////////////////////////////////
 /**
@@ -614,7 +616,7 @@ main(int argc, char const *argv[])
     std::cout << " -- " << iteration::error(iter) << std::flush;
 
     iter.success = std::abs(iter.error() - c.tol) <= c.tol;
-    if ( iter.success ) // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    //if ( iter.success ) // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     {
       iter.success = true;
       // SAVE TIME STEP
@@ -661,12 +663,12 @@ main(int argc, char const *argv[])
 
     ++iter.iter;
 
-    iter.dt = std::pow( c.tol/iter.Lhfh , 0.25 )*iter.dt;
+    //iter.dt = std::pow( c.tol/iter.Lhfh , 0.25 )*iter.dt;// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     if ( iter.current_time+iter.dt > c.Tf ) { iter.dt = c.Tf - iter.current_time; }
   } // while (  i_t*dt < Tf )
   std::cout << "\r" << time(iter) << std::endl;
 
-  save_data("dp4");
+  save_data("");
 
   auto dx_y = [&,count=0](auto const& y) mutable {
     std::stringstream ss; ss<< fh.step.dx*(count++) <<" "<<y;

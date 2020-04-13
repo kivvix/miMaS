@@ -158,7 +158,7 @@ main(int argc, char const *argv[])
   };
 
 
-  signals_handler::signals_handler<SIGINT,SIGILL>::handler( [&]( int signal ) -> void {
+  signal_handler::signal_handler<SIGINT,SIGILL>::handler( [&]( int signal ) -> void {
     std::cerr << "\n\033[41;97m ** End of execution after signal " << signal << " ** \033[0m\n";
     std::cerr << "\033[36msave data...\033[0m\n";
 

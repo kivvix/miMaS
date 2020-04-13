@@ -122,7 +122,7 @@ main ( int argc , char const * argv[] )
   };
 
   // to stop simulation at any time (and save data)
-  signals_handler::signals_handler<SIGINT,SIGILL>::handler( [&]( int signal ) -> void {
+  signal_handler::signal_handler<SIGINT,SIGILL>::handler( [&]( int signal ) -> void {
     std::cerr << "\n\033[41;97m ** End of execution after signal " << signal << " ** \033[0m\n";
     std::cerr << "\033[38;5;202msave data...\033[0m\n";
     save_data("_SIGINT");

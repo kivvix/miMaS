@@ -18,6 +18,7 @@
 #include "miMaS/poisson.h"
 #include "miMaS/rk.h"
 #include "miMaS/config.h"
+#include "miMaS/signal_handler.h"
 
 namespace o2 {
   template < typename _T , std::size_t NumDimsV >
@@ -68,21 +69,22 @@ main(int argc, char const *argv[])
     p = argv[1];
   }
   auto c = config(p);
+  std::cout << " " << c.output_dir << std::endl;
+  c.name = "";
 
-  std::filesystem::create_directories(c.output_dir);
-  std::ofstream oconfig( c.output_dir / "config.init" );
-  oconfig << c << std::endl;
-  oconfig.close();
+  c.create_output_directory();
+  std::ofstream ofconfig( c.output_dir / "config.init" );
+  ofconfig << c << "\n";
+  ofconfig.close();
 
 /* --------------------------------------------------------------- */
   field<double,1> f(boost::extents[c.Nv][c.Nx]);
-  f.range.v_min = -8.; f.range.v_max = 8.;
-  f.step.dv = (f.range.v_max-f.range.v_min)/c.Nv;
-
   double Kx = 0.5;
-  f.range.x_min = 0.; f.range.x_max = 2./Kx*math::pi<double>();
-  //f.range.x_min = 0.; f.range.x_max = 20.*math::pi<double>();
-  f.step.dx = (f.range.x_max-f.range.x_min)/c.Nx;
+
+  f.range.v_min = -8.; f.range.v_max = 8.;
+  //f.range.x_min =  0.; f.range.x_max = 2./Kx*math::pi<double>();
+  f.range.x_min = 0.; f.range.x_max = 20.*math::pi<double>();
+  f.compute_steps();
 
   ublas::vector<double> v (c.Nv,0.);
   for ( std::size_t k=0 ; k<c.Nv ; ++k ) { v[k] = Vk(k); }
@@ -94,14 +96,14 @@ main(int argc, char const *argv[])
     for ( int i=-c.Nx/2 ; i<0 ; ++i ) { kx[c.Nx+i] = 2.*math::pi<double>()*i/l; }
   }
 
-  double alpha = 0.2 , ui = 2.0;
-  auto landau_M = maxwellian( 1.        ,  0. , 1.   );
-  auto db_M1    = maxwellian( 0.5       , -ui , 1.   ) , db_M2  = maxwellian( 0.5       ,  ui , 1.  );
+  //double alpha = 0.2 , ui = 2.0;
+  auto landau_M = maxwellian( 1.        ,  0.   , 1.   );
+  auto db_M1    = maxwellian( 0.5       , -c.ui , 1.   ) , db_M2  = maxwellian( 0.5       ,  c.ui , 1.  );
   //auto bot_M1   = maxwellian( 1.-alpha  ,  0. , 1.   ) , bot_M2 = maxwellian( alpha     ,  ui , 0.25);
   auto bot_M1   = maxwellian(0.9,0.,1.) , bot_M2 = maxwellian(0.2,4.5,0.25);
-  auto tb_MC    = maxwellian( 1.-alpha  ,  0. , c.Tc ) ,
-       tb_M1    = maxwellian( 0.5*alpha ,  ui , 1.   ) , tb_M2  = maxwellian( 0.5*alpha , -ui , 1.  );
-  auto v10_MC   = maxwellian( 1.-alpha  ,  0. , c.Tc ) , v10_Mh = maxwellian( alpha     ,  0. , 1.  );
+  auto tb_MC    = maxwellian( 1.-c.alpha  ,  0. , c.Tc ) ,
+       tb_M1    = maxwellian( 0.5*c.alpha ,  c.ui , 1.   ) , tb_M2  = maxwellian( 0.5*c.alpha , -c.ui , 1.  );
+  auto v10_MC   = maxwellian( 1.-c.alpha  ,  0. , c.Tc ) , v10_Mh = maxwellian( c.alpha     ,  0. , 1.  );
 
   for (field<double,2>::size_type k=0 ; k<f.size(0) ; ++k ) {
     for (field<double,2>::size_type i=0 ; i<f.size(1) ; ++i ) {
@@ -109,6 +111,8 @@ main(int argc, char const *argv[])
 
       //// landau damping : Kx=0.5
       //f[k][i] = landau_M(Xi(i),Vk(k))*(1.+0.001*std::cos(Kx*Xi(i)));
+      //// strong landau damping : Kx=0.5
+      //f[k][i] = landau_M(Xi(i),Vk(k))*(1.+0.6*std::cos(Kx*Xi(i)));
       //// double beam Kx=0.2, ui=2.4 ou Kx=0.2, ui=4.5
       //f[k][i] = (db_M1(Xi(i),Vk(k))+db_M2(Xi(i),Vk(k)))*(1.+0.001*std::cos(Kx*Xi(i)));
       //// bot Kx=0.5 , alpha=0.2 , ui=4.5
@@ -123,7 +127,8 @@ main(int argc, char const *argv[])
 
   unsigned int i_t = 0;
   double current_time = 0.;
-  double dt = 1.433*f.step.dv/0.6;
+  double dt =  0.1*f.step.dv/0.6;
+  //double dt = 1.433*f.step.dv;
 
   std::vector<double> ee;   ee.reserve(int(std::ceil(c.Tf/dt))+1);
   std::vector<double> Emax; Emax.reserve(int(std::ceil(c.Tf/dt))+1);
@@ -132,12 +137,40 @@ main(int argc, char const *argv[])
 
   std::vector<double> times; times.reserve(int(std::ceil(c.Tf/dt))+1);
 
+  // lambda to save data, any time you want, where you want
+  auto save_data = [&] ( std::string && suffix ) -> void {
+    suffix = c.name + suffix;
+
+    // save temporel data
+    auto dt_y = [&,count=0] (auto const& y) mutable {
+      std::stringstream ss; ss<<times[count++]<<" "<<y;
+      return ss.str();
+    };
+    c << monitoring::data( "ee_"+suffix+".dat"   , ee   , dt_y );
+    c << monitoring::data( "Emax_"+suffix+".dat" , Emax , dt_y );
+    c << monitoring::data( "H_"+suffix+".dat"    , H    , dt_y );
+
+    // save distribution function
+    f.write( c.output_dir / ("vp_"+suffix+".dat") );
+  };
+
+  // to stop simulation at any time (and save data)
+  signal_handler::signal_handler<SIGINT,SIGILL>::handler( [&]( int signal ) -> void {
+    std::cerr << "\n\033[41;97m ** End of execution after signal " << signal << " ** \033[0m\n";
+    std::cerr << "\033[38;5;202msave data...\033[0m\n";
+    save_data("_SIGINT");
+  });
+
   // space scheme
-  auto weno = [&](field<double,1>const& f , ublas::vector<double> const& E )->field<double,1> { return weno::trp_v(f,E); };
-  auto cd2  = [&](field<double,1>const& f , ublas::vector<double> const& E )->field<double,1> { return o2::trp_v(f,E); };
+  auto wenol = [&](field<double,1>const& f , ublas::vector<double> const& E )->field<double,1> { return wenolin::trp_v(f,E); };
+  auto weno  = [&](field<double,1>const& f , ublas::vector<double> const& E )->field<double,1> { return weno::trp_v(f,E); };
+  auto cd2   = [&](field<double,1>const& f , ublas::vector<double> const& E )->field<double,1> { return o2::trp_v(f,E); };
 
   // time scheme init
-  expRK::RK22<poisson<double>> rk(c.Nx,c.Nv,f.range.len_x(),f.shape(),v,kx,cd2);
+  //expRK::HochbruckOstermann<poisson<double>> rk(c.Nx,c.Nv,f.range.len_x(),f.shape(),v,kx,cd2);
+  //expRK::Krogstad<poisson<double>> rk(c.Nx,c.Nv,f.range.len_x(),f.shape(),v,kx,cd2);
+  //lawson::RK33<poisson<double>> rk(c.Nx,c.Nv,f.range.len_x(),f.shape(),v,kx,weno);
+  lawson::RK44<poisson<double>> rk(c.Nx,c.Nv,f.range.len_x(),f.shape(),v,kx,weno);
 
   rk.E = rk.poisson_solver(f.density());
   {
@@ -176,23 +209,9 @@ main(int argc, char const *argv[])
   } // while (  i_t*dt < Tf )
   std::cout<<" ["<<std::setw(5)<<i_t<<"] "<<i_t*dt <<std::endl;
 
-  f.write( c.output_dir / "vp.dat" );
+  //f.write( c.output_dir / "vp.dat" );
 
-  auto dt_y = [&,count=0](auto const& y) mutable { std::stringstream ss; ss<<times[count++]<<" "<<y; return ss.str(); };
-
-  std::ofstream of;
-
-#define save_data(data,suffix,x_y) {\
-  std::stringstream filename; filename << #data << suffix << ".dat"; \
-  of.open( c.output_dir / filename.str() );\
-  std::transform( data.begin() , data.end() , std::ostream_iterator<std::string>(of,"\n") , x_y );\
-  of.close();\
-}
-  save_data(ee,"",dt_y);
-  save_data(Emax,"",dt_y);
-  save_data(H,"",dt_y);
-  save_data(Ec,"",dt_y);
-
+  save_data("");
 /*
   of.open( c.output_dir / "ee.dat" );
   std::transform( ee.begin() , ee.end() , std::ostream_iterator<std::string>(of,"\n") , dt_y );
@@ -210,6 +229,7 @@ main(int argc, char const *argv[])
   std::transform( Ec.begin() , Ec.end() , std::ostream_iterator<std::string>(of,"\n") , dt_y );
   of.close();
 */
+  std::ofstream of;
   auto dx_y = [&,count=0](auto const& y) mutable { std::stringstream ss; ss<< f.step.dx*(count++) <<" "<<y; return ss.str(); };
 
   of.open( c.output_dir / "E.dat" );
